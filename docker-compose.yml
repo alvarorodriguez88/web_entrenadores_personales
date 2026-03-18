@@ -13,6 +13,21 @@ services:
     volumes:
       - db_data:/var/lib/mysql
       - ./database/migrations/v1.0.0_initial.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  
+  backend:
+    build: ./backend
+    container_name: web_entrenadores_backend
+    restart: unless-stopped
+    ports:
+      - "8080:8000"
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   db_data:
