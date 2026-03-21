@@ -46,5 +46,5 @@ class Cliente(Base):
 
     user = relationship("Usuario", back_populates="client")
     trainer = relationship("Entrenador", back_populates="clients")
-    physical_metrics = relationship("MetricaFisica", back_populates="client")
-    routine_assignments = relationship("AsignacionRutina", back_populates="client")
+    physical_metrics = relationship("MetricaFisica", back_populates="client", cascade="all, delete-orphan")
+    routine_assignments = relationship("AsignacionRutina", back_populates="client", cascade="all, delete-orphan")
