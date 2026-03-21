@@ -19,7 +19,6 @@ class Ejercicio(Base):
     creado_en = Column(DateTime, nullable=False, server_default=func.now())
 
     trainer = relationship("Entrenador", back_populates="exercises")
-
     routine_block_exercises = relationship("BloqueRutinaEjercicio", back_populates="exercise")
     completed_exercises = relationship("EjercicioRealizado", back_populates="exercise")
  
