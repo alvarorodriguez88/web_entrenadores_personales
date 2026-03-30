@@ -52,7 +52,6 @@ class EjercicioRealizado(Base):
     peso_real = Column(DECIMAL(6, 2), nullable=True)
     rpe_real = Column(Integer, nullable=True)
     comentario = Column(String(255), nullable=True)
-    distancia_km = Column(DECIMAL(5, 2), nullable=True)
 
     session = relationship("SesionRutina", back_populates="completed_exercises")
     exercise = relationship("Ejercicio", back_populates="completed_exercises")

@@ -1,5 +1,8 @@
 from fastapi import FastAPI
 import app.models
+
+from app.routers import auth, users, exercises, routines, assignments, metrics
+
  
 app = FastAPI(
     title="Web Entrenadores API",
@@ -10,5 +13,11 @@ app = FastAPI(
  
 @app.get("/health")
 def health_check():
-    """Endpoint para verificar que la API está funcionando."""
     return {"status": "ok"}
+
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
+app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
+app.include_router(exercises.router, prefix="/api/v1/exercises", tags=["Exercises"])
+app.include_router(routines.router, prefix="/api/v1/routines", tags=["Routines"])
+app.include_router(assignments.router, prefix="/api/v1/assignments", tags=["Assignments"])
+app.include_router(metrics.router, prefix="/api/v1/metrics", tags=["Metrics"])
