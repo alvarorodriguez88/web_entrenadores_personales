@@ -10,10 +10,6 @@ SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,N
 -- -----------------------------------------------------
 -- Schema web_entrenadores
 -- -----------------------------------------------------
-
--- -----------------------------------------------------
--- Schema web_entrenadores
--- -----------------------------------------------------
 CREATE SCHEMA IF NOT EXISTS `web_entrenadores` DEFAULT CHARACTER SET utf8mb4 ;
 USE `web_entrenadores` ;
 
@@ -114,6 +110,7 @@ CREATE TABLE IF NOT EXISTS `web_entrenadores`.`rutina` (
   `descripcion` VARCHAR(255) NULL,
   `nivel` ENUM('PRINCIPIANTE', 'INTERMEDIO', 'AVANZADO') NULL,
   `fecha_creacion` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `archivado` TINYINT(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id_rutina`),
   INDEX `fk_rutina_entrenador_idx` (`id_entrenador` ASC) VISIBLE,
   CONSTRAINT `fk_rutina_entrenador`
@@ -175,6 +172,37 @@ CREATE TABLE IF NOT EXISTS `web_entrenadores`.`asignacionRutina` (
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
+-- -----------------------------------------------------
+-- Table `web_entrenadores`.`asignacionEjercicio`
+-- -----------------------------------------------------
+
+DROP TABLE IF EXISTS `web_entrenadores`.`asignacionEjercicio` ;
+
+CREATE TABLE IF NOT EXISTS `web_entrenadores`.`asignacionEjercicio` (
+  `id_asignacion_ejercicio`  INT NOT NULL AUTO_INCREMENT,
+  `id_asignacion_rutina`     INT NOT NULL,
+  `id_bloque_rutina_ej`      INT NOT NULL,
+  `series_plan`              TINYINT NULL,
+  `reps_plan`                TINYINT NULL,
+  `peso_obj`                 DECIMAL(6,2) NULL,
+  `descanso_seg`             SMALLINT NULL,
+  `notas`                    VARCHAR(255) NULL,
+  PRIMARY KEY (`id_asignacion_ejercicio`),
+  UNIQUE INDEX `uq_asignacion_ejercicio` (`id_asignacion_rutina` ASC, `id_bloque_rutina_ej` ASC) VISIBLE,
+  INDEX `fk_asignacion_ej_asignacion_idx` (`id_asignacion_rutina` ASC) VISIBLE,
+  INDEX `fk_asignacion_ej_bloque_ej_idx` (`id_bloque_rutina_ej` ASC) VISIBLE,
+  CONSTRAINT `fk_asignacion_ej_asignacion`
+    FOREIGN KEY (`id_asignacion_rutina`)
+    REFERENCES `web_entrenadores`.`asignacionRutina` (`id_asignacion_rutina`)
+    ON DELETE CASCADE
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_asignacion_ej_bloque_ej`
+    FOREIGN KEY (`id_bloque_rutina_ej`)
+    REFERENCES `web_entrenadores`.`bloqueRutinaEjercicio` (`id_bloque_rutina_ejercicio`)
+    ON DELETE CASCADE
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
 
 -- -----------------------------------------------------
 -- Table `web_entrenadores`.`sesionRutina`
@@ -183,8 +211,8 @@ DROP TABLE IF EXISTS `web_entrenadores`.`sesionRutina` ;
 
 CREATE TABLE IF NOT EXISTS `web_entrenadores`.`sesionRutina` (
   `id_sesion_rutina` INT NOT NULL AUTO_INCREMENT,
-  `id_asignacion` INT NULL,
-  `id_bloque_rutina` INT NULL,
+  `id_asignacion` INT NOT NULL,
+  `id_bloque_rutina` INT NOT NULL,
   `fecha_hora` DATETIME NULL DEFAULT CURRENT_TIMESTAMP,
   `duracion_min` SMALLINT NULL,
   `esfuerzo_rpe` TINYINT NOT NULL,
@@ -218,6 +246,7 @@ CREATE TABLE IF NOT EXISTS `web_entrenadores`.`ejercicio` (
   `video_url` VARCHAR(255) NULL,
   `fotos_url` VARCHAR(255) NULL,
   `creado_en` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `archivado` TINYINT(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id_ejercicio`),
   INDEX `fk_entrenador_ejercicio_idx` (`id_entrenador` ASC) VISIBLE,
   UNIQUE INDEX `uq_ejercicio_entrenador_nombre` (`id_entrenador` ASC, `nombre` ASC) VISIBLE,
