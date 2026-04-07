@@ -10,10 +10,6 @@ SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,N
 -- -----------------------------------------------------
 -- Schema web_entrenadores
 -- -----------------------------------------------------
-
--- -----------------------------------------------------
--- Schema web_entrenadores
--- -----------------------------------------------------
 CREATE SCHEMA IF NOT EXISTS `web_entrenadores` DEFAULT CHARACTER SET utf8mb4 ;
 USE `web_entrenadores` ;
 
