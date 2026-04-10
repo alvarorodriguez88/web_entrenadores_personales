@@ -199,17 +199,23 @@ def delete_block(db: Session, routine_id: int, block_id: int, trainer_id: int) -
 def reorder_blocks(db: Session, routine_id: int, data: ReorderRequest, trainer_id: int) -> list[BloqueRutina]:
     get_routine_by_id(db, routine_id, trainer_id)
 
-    for new_day, block_id in enumerate(data.ordered_ids, start=1):
+    for block_id in data.ordered_ids:
         block = db.query(BloqueRutina).filter(
             BloqueRutina.id_bloque_rutina == block_id,
             BloqueRutina.id_rutina == routine_id
         ).first()
-
         if not block:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Block {block_id} not found in this routine"
             )
+        block.numero_dia = -block.numero_dia
+    db.flush()
+
+    for new_day, block_id in enumerate(data.ordered_ids, start=1):
+        block = db.query(BloqueRutina).filter(
+            BloqueRutina.id_bloque_rutina == block_id
+        ).first()
         block.numero_dia = new_day
 
     db.commit()
@@ -317,17 +323,23 @@ def delete_block_exercise(db: Session, routine_id: int, block_id: int, block_exe
 def reorder_block_exercises(db: Session, routine_id: int, block_id: int, data: ReorderRequest, trainer_id: int) -> list[BloqueRutinaEjercicio]:
     get_block_by_id(db, routine_id, block_id, trainer_id)
 
-    for new_order, block_exercise_id in enumerate(data.ordered_ids, start=1):
+    for block_exercise_id in data.ordered_ids:
         block_exercise = db.query(BloqueRutinaEjercicio).filter(
             BloqueRutinaEjercicio.id_bloque_rutina_ejercicio == block_exercise_id,
             BloqueRutinaEjercicio.id_bloque_rutina == block_id
         ).first()
-
         if not block_exercise:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Exercise {block_exercise_id} not found in this block"
             )
+        block_exercise.orden = -block_exercise.orden
+    db.flush()
+
+    for new_order, block_exercise_id in enumerate(data.ordered_ids, start=1):
+        block_exercise = db.query(BloqueRutinaEjercicio).filter(
+            BloqueRutinaEjercicio.id_bloque_rutina_ejercicio == block_exercise_id
+        ).first()
         block_exercise.orden = new_order
 
     db.commit()

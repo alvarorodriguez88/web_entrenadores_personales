@@ -3,6 +3,14 @@ from datetime import datetime
 from typing import Optional
 
 
+class UserBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id_usuario: int
+    email: EmailStr
+    nombre: str
+    apellidos: str
+    fecha_creacion: datetime
+
 class TrainerUpdate(BaseModel):
     email: Optional[EmailStr] = None
     nombre: Optional[str] = None
@@ -13,13 +21,9 @@ class TrainerUpdate(BaseModel):
 class TrainerResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id_usuario: int
-    email: EmailStr
-    nombre: str
-    apellidos: str
+    user : UserBase
     especialidad: Optional[str] = None
     bio: Optional[str] = None
-    fecha_creacion: datetime
 
 class ClientUpdate(BaseModel):
     email: Optional[EmailStr] = None
@@ -30,10 +34,7 @@ class ClientUpdate(BaseModel):
 class ClientResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id_usuario: int
-    email: EmailStr
-    nombre: str
-    apellidos: str
+    user : UserBase
     nivel: str
     fecha_alta: datetime
     id_entrenador: int
