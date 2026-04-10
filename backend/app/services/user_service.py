@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException, status
 
 from app.models.user import Usuario, Entrenador, Cliente
@@ -6,7 +6,9 @@ from app.schemas.user import TrainerUpdate, ClientUpdate
 
 
 def get_trainer_profile(db: Session, user_id: int) -> Entrenador:
-    trainer = db.query(Entrenador).filter(
+    trainer = db.query(Entrenador).options(
+        joinedload(Entrenador.user)
+    ).filter(
         Entrenador.id_usuario == user_id
     ).first()
 
@@ -18,7 +20,9 @@ def get_trainer_profile(db: Session, user_id: int) -> Entrenador:
     return trainer
 
 def get_client_profile(db: Session, user_id: int) -> Cliente:
-    client = db.query(Cliente).filter(
+    client = db.query(Cliente).options(
+        joinedload(Cliente.user)
+    ).filter(
         Cliente.id_usuario == user_id
     ).first()
 
