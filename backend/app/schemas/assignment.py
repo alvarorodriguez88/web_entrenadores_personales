@@ -74,3 +74,30 @@ class ExerciseLogResponse(BaseModel):
     peso_real: Optional[Decimal] = None
     rpe_real: Optional[int] = None
     comentario: Optional[str] = None
+
+class AssignmentExerciseCreate(BaseModel):
+    id_bloque_rutina_ej: int
+    series_plan: Optional[int] = None
+    reps_plan: Optional[int] = None
+    peso_obj: Optional[Decimal] = None
+    descanso_seg: Optional[int] = None
+    notas: Optional[str] = None
+
+class AssignmentExerciseUpdate(BaseModel):
+    series_plan: Optional[int] = None
+    reps_plan: Optional[int] = None
+    peso_obj: Optional[Decimal] = None
+    descanso_seg: Optional[int] = None
+    notas: Optional[str] = None
+
+class AssignmentExerciseResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id_asignacion_ejercicio: int
+    id_asignacion_rutina: int
+    id_bloque_rutina_ej: int
+    series_plan: Optional[int] = None
+    reps_plan: Optional[int] = None
+    peso_obj: Optional[Decimal] = None
+    descanso_seg: Optional[int] = None
+    notas: Optional[str] = None

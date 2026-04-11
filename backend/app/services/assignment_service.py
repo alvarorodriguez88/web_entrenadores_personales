@@ -1,13 +1,14 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 
-from app.models.assignment import AsignacionRutina, SesionRutina, EjercicioRealizado
+from app.models.assignment import AsignacionRutina, SesionRutina, EjercicioRealizado, AsignacionEjercicio
 from app.models.user import Cliente
-from app.models.routine import Rutina, BloqueRutina
+from app.models.routine import Rutina, BloqueRutina, BloqueRutinaEjercicio
 from app.schemas.assignment import (
     AssignmentCreate, AssignmentStatusUpdate,
     SessionCreate, SessionUpdate,
-    ExerciseLogCreate, ExerciseLogUpdate
+    ExerciseLogCreate, ExerciseLogUpdate,
+    AssignmentExerciseCreate, AssignmentExerciseUpdate
 )
 
 
@@ -313,3 +314,90 @@ def _get_session_for_access(db: Session, session_id: int, user_id: int, is_train
             )
 
     return session
+
+def get_assignment_exercises(db: Session, assignment_id: int, user_id: int, is_trainer: bool) -> list[AsignacionEjercicio]:
+    _verify_assignment_access(db, assignment_id, user_id, is_trainer)
+    return db.query(AsignacionEjercicio).filter(
+        AsignacionEjercicio.id_asignacion_rutina == assignment_id
+    ).all()
+
+def get_assignment_exercise_by_id(db: Session, assignment_id: int, customization_id: int, user_id: int, is_trainer: bool) -> AsignacionEjercicio:
+    _verify_assignment_access(db, assignment_id, user_id, is_trainer)
+
+    customization = db.query(AsignacionEjercicio).filter(
+        AsignacionEjercicio.id_asignacion_ejercicio == customization_id,
+        AsignacionEjercicio.id_asignacion_rutina == assignment_id
+    ).first()
+
+    if not customization:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Exercise customization not found"
+        )
+    return customization
+
+def create_assignment_exercise(db: Session, assignment_id: int, data: AssignmentExerciseCreate, trainer_id: int) -> AsignacionEjercicio:
+    assignment = get_assignment_by_id(db, assignment_id, trainer_id)
+
+    block_exercise = db.query(BloqueRutinaEjercicio).join(BloqueRutina).filter(
+        BloqueRutinaEjercicio.id_bloque_rutina_ejercicio == data.id_bloque_rutina_ej,
+        BloqueRutina.id_rutina == assignment.id_rutina
+    ).first()
+
+    if not block_exercise:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Exercise not found in this routine"
+        )
+
+    existing = db.query(AsignacionEjercicio).filter(
+        AsignacionEjercicio.id_asignacion_rutina == assignment_id,
+        AsignacionEjercicio.id_bloque_rutina_ej == data.id_bloque_rutina_ej
+    ).first()
+
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A customization already exists for this exercise. Use PUT to update it."
+        )
+
+    customization = AsignacionEjercicio(
+        id_asignacion_rutina=assignment_id,
+        id_bloque_rutina_ej=data.id_bloque_rutina_ej,
+        series_plan=data.series_plan,
+        reps_plan=data.reps_plan,
+        peso_obj=data.peso_obj,
+        descanso_seg=data.descanso_seg,
+        notas=data.notas
+    )
+    db.add(customization)
+    db.commit()
+    db.refresh(customization)
+    return customization
+
+def update_assignment_exercise(db: Session, assignment_id: int, customization_id: int, data: AssignmentExerciseUpdate, trainer_id: int) -> AsignacionEjercicio:
+    customization = get_assignment_exercise_by_id(
+        db, assignment_id, customization_id, trainer_id, is_trainer=True
+    )
+
+    if data.series_plan is not None:
+        customization.series_plan = data.series_plan
+    if data.reps_plan is not None:
+        customization.reps_plan = data.reps_plan
+    if data.peso_obj is not None:
+        customization.peso_obj = data.peso_obj
+    if data.descanso_seg is not None:
+        customization.descanso_seg = data.descanso_seg
+    if data.notas is not None:
+        customization.notas = data.notas
+
+    db.commit()
+    db.refresh(customization)
+    return customization
+
+def delete_assignment_exercise(db: Session, assignment_id: int, customization_id: int, trainer_id: int) -> None:
+    customization = get_assignment_exercise_by_id(
+        db, assignment_id, customization_id, trainer_id, is_trainer=True
+    )
+    db.delete(customization)
+    db.commit()
