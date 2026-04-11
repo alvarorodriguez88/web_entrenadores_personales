@@ -7,7 +7,8 @@ from app.models.user import Entrenador, Cliente
 from app.schemas.assignment import (
     AssignmentCreate, AssignmentStatusUpdate, AssignmentResponse,
     SessionCreate, SessionUpdate, SessionResponse,
-    ExerciseLogCreate, ExerciseLogUpdate, ExerciseLogResponse
+    ExerciseLogCreate, ExerciseLogUpdate, ExerciseLogResponse, 
+    AssignmentExerciseCreate, AssignmentExerciseUpdate, AssignmentExerciseResponse
 )
 from app.services import assignment_service
 
@@ -42,6 +43,34 @@ def get_client_assignment_history(client_id: int, trainer: Entrenador = Depends(
 @router.post("/clients/{client_id}", response_model=AssignmentResponse, status_code=status.HTTP_201_CREATED)
 def create_assignment(client_id: int, data: AssignmentCreate, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
     return assignment_service.create_assignment(db, client_id, data, trainer.id_usuario)
+
+@router.get("/{assignment_id}/exercises", response_model=list[AssignmentExerciseResponse])
+def get_assignment_exercises(assignment_id: int, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
+    return assignment_service.get_assignment_exercises(db, assignment_id, trainer.id_usuario, is_trainer=True)
+
+@router.get("/me/{assignment_id}/exercises", response_model=list[AssignmentExerciseResponse])
+def get_assignment_exercises_client(assignment_id: int, client: Cliente = Depends(get_current_client), db: Session = Depends(get_db)):
+    return assignment_service.get_assignment_exercises(db, assignment_id, client.id_usuario, is_trainer=False)
+
+@router.get("/{assignment_id}/exercises/{customization_id}", response_model=AssignmentExerciseResponse)
+def get_assignment_exercise(assignment_id: int, customization_id: int, trainer: Entrenador = Depends(get_current_trainer),db: Session = Depends(get_db)):
+    return assignment_service.get_assignment_exercise_by_id(db, assignment_id, customization_id, trainer.id_usuario, is_trainer=True)
+
+@router.get("/me/{assignment_id}/exercises/{customization_id}", response_model=AssignmentExerciseResponse)
+def get_assignment_exercise_client(assignment_id: int, customization_id: int, client: Cliente = Depends(get_current_client), db: Session = Depends(get_db)):
+    return assignment_service.get_assignment_exercise_by_id(db, assignment_id, customization_id, client.id_usuario, is_trainer=False)
+
+@router.post("/{assignment_id}/exercises", response_model=AssignmentExerciseResponse, status_code=status.HTTP_201_CREATED)
+def create_assignment_exercise(assignment_id: int, data: AssignmentExerciseCreate, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
+    return assignment_service.create_assignment_exercise(db, assignment_id, data, trainer.id_usuario)
+
+@router.put("/{assignment_id}/exercises/{customization_id}", response_model=AssignmentExerciseResponse)
+def update_assignment_exercise(assignment_id: int, customization_id: int, data: AssignmentExerciseUpdate, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
+    return assignment_service.update_assignment_exercise(db, assignment_id, customization_id, data, trainer.id_usuario)
+
+@router.delete("/{assignment_id}/exercises/{customization_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_assignment_exercise(assignment_id: int, customization_id: int, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
+    assignment_service.delete_assignment_exercise(db, assignment_id, customization_id, trainer.id_usuario)
 
 @router.get("/{assignment_id}/sessions", response_model=list[SessionResponse])
 def get_sessions(assignment_id: int, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):

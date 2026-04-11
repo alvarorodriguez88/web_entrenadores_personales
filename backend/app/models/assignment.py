@@ -22,6 +22,7 @@ class AsignacionRutina(Base):
     client = relationship("Cliente", back_populates="routine_assignments")
     routine = relationship("Rutina", back_populates="assignments")
     sessions = relationship("SesionRutina", back_populates="assignment", cascade="all, delete-orphan")
+    exercise_customizations = relationship("AsignacionEjercicio", back_populates="assignment", cascade="all, delete-orphan")
 
 
 class SesionRutina(Base):
@@ -55,3 +56,19 @@ class EjercicioRealizado(Base):
 
     session = relationship("SesionRutina", back_populates="completed_exercises")
     exercise = relationship("Ejercicio", back_populates="completed_exercises")
+
+
+class AsignacionEjercicio(Base):
+    __tablename__ = "asignacionEjercicio"
+
+    id_asignacion_ejercicio = Column(Integer, primary_key=True, autoincrement=True)
+    id_asignacion_rutina = Column(Integer, ForeignKey("asignacionRutina.id_asignacion_rutina"), nullable=False)
+    id_bloque_rutina_ej = Column(Integer, ForeignKey("bloqueRutinaEjercicio.id_bloque_rutina_ejercicio"), nullable=False)
+    series_plan = Column(Integer, nullable=True)
+    reps_plan = Column(Integer, nullable=True)
+    peso_obj = Column(DECIMAL(6, 2), nullable=True)
+    descanso_seg = Column(SmallInteger, nullable=True)
+    notas = Column(String(255), nullable=True)
+
+    assignment = relationship("AsignacionRutina", back_populates="exercise_customizations")
+    block_exercise = relationship("BloqueRutinaEjercicio", back_populates="customizations")
