@@ -11,6 +11,7 @@ const sizeClasses = {
 }
 
 function Button({
+  type = 'button',
   variant = 'primary',
   size = 'md',
   disabled = false,
@@ -22,6 +23,7 @@ function Button({
 
   return (
     <button
+      type={type}
       onClick={onClick}
       disabled={isDisabled}
       className={`
