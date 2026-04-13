@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 import app.models
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers import auth, users, exercises, routines, assignments, metrics
 
@@ -8,6 +9,17 @@ app = FastAPI(
     title="Web Entrenadores API",
     description="API REST para la plataforma de gestión de entrenadores personales",
     version="1.0.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:8080",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
  
  

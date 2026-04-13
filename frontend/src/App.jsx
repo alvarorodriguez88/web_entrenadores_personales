@@ -1,7 +1,8 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './routes/ProtectedRoute'
-
+import TrainerLayout from './layouts/TrainerLayout'
+import ClientLayout from './layouts/ClientLayout'
 
 import LandingPage from './pages/auth/LandingPage'
 import LoginPage from './pages/auth/LoginPage'
@@ -14,7 +15,8 @@ import ExercisesPage from './pages/client/EntrenamientoPage'
 import TrainerHomePage from './pages/trainer/InicioPage'
 import TrainerDashboardPage from './pages/trainer/DashboardPage'
 import ContentPage from './pages/trainer/ContenidoPage'
-import ClientsPage from './pages/trainer/ClientesPage'
+import ClientsPage        from './pages/trainer/ClientesPage'
+import ClientePerfilPage  from './pages/trainer/ClientePerfilPage'
 
 function App() {
   return (
@@ -29,7 +31,9 @@ function App() {
             path="/client/inicio"
             element={
               <ProtectedRoute requiredRole="client">
-                <ClientHomePage />
+                <ClientLayout>
+                  <ClientHomePage />
+                </ClientLayout>
               </ProtectedRoute>
             }
           />
@@ -37,7 +41,9 @@ function App() {
             path="/client/dashboard"
             element={
               <ProtectedRoute requiredRole="client">
-                <ClientDashboardPage />
+                <ClientLayout>
+                  <ClientDashboardPage />
+                </ClientLayout>
               </ProtectedRoute>
             }
           />
@@ -45,7 +51,9 @@ function App() {
             path="/client/exercises"
             element={
               <ProtectedRoute requiredRole="client">
-                <ExercisesPage />
+                <ClientLayout>
+                  <ExercisesPage />
+                </ClientLayout>
               </ProtectedRoute>
             }
           />
@@ -54,7 +62,9 @@ function App() {
             path="/trainer/inicio"
             element={
               <ProtectedRoute requiredRole="trainer">
-                <TrainerHomePage />
+                <TrainerLayout>
+                  <TrainerHomePage />
+                </TrainerLayout>
               </ProtectedRoute>
             }
           />
@@ -62,7 +72,9 @@ function App() {
             path="/trainer/dashboard"
             element={
               <ProtectedRoute requiredRole="trainer">
-                <TrainerDashboardPage />
+                <TrainerLayout>
+                  <TrainerDashboardPage />
+                </TrainerLayout>
               </ProtectedRoute>
             }
           />
@@ -70,7 +82,9 @@ function App() {
             path="/trainer/content"
             element={
               <ProtectedRoute requiredRole="trainer">
-                <ContentPage />
+                <TrainerLayout>
+                  <ContentPage />
+                </TrainerLayout>
               </ProtectedRoute>
             }
           />
@@ -78,7 +92,20 @@ function App() {
             path="/trainer/clients"
             element={
               <ProtectedRoute requiredRole="trainer">
-                <ClientsPage />
+                <TrainerLayout>
+                  <ClientsPage />
+                </TrainerLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/trainer/clients/:id"
+            element={
+              <ProtectedRoute requiredRole="trainer">
+                <TrainerLayout>
+                  <ClientePerfilPage />
+                </TrainerLayout>
               </ProtectedRoute>
             }
           />

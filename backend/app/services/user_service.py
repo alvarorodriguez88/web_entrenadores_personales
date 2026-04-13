@@ -69,6 +69,17 @@ def update_client_profile(db: Session, user_id: int, data: ClientUpdate) -> Clie
     db.refresh(client)
     return client
 
+def get_client_by_id(db: Session, trainer_id: int, client_id: int):
+    client = db.query(Cliente).options(
+        joinedload(Cliente.user)
+    ).filter(
+        Cliente.id_usuario == client_id,
+        Cliente.id_entrenador == trainer_id
+    ).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    return client
+
 
 
 def _check_email_available(db: Session, email: str, current_user_id: int) -> None:
