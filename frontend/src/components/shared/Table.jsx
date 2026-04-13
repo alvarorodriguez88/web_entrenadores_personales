@@ -1,4 +1,4 @@
-function Table({ columns, data, emptyMessage = 'No hay datos disponibles' }) {
+function Table({ columns, data, emptyMessage = 'No hay datos disponibles', onRowClick }) {
   return (
     <div className="w-full overflow-x-auto">
       <table className="w-full text-sm text-left">
@@ -30,7 +30,8 @@ function Table({ columns, data, emptyMessage = 'No hay datos disponibles' }) {
             data.map((row, i) => (
               <tr
                 key={i}
-                className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                onClick={() => onRowClick?.(row)}
+                className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${onRowClick ? 'cursor-pointer' : ''}`}
               >
                 {columns.map((col) => (
                   <td key={col.key} className="px-4 py-3 text-gray-700">

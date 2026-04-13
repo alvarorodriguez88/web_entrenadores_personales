@@ -15,7 +15,8 @@ import ExercisesPage from './pages/client/EntrenamientoPage'
 import TrainerHomePage from './pages/trainer/InicioPage'
 import TrainerDashboardPage from './pages/trainer/DashboardPage'
 import ContentPage from './pages/trainer/ContenidoPage'
-import ClientsPage from './pages/trainer/ClientesPage'
+import ClientsPage        from './pages/trainer/ClientesPage'
+import ClientePerfilPage  from './pages/trainer/ClientePerfilPage'
 
 function App() {
   return (
@@ -93,6 +94,17 @@ function App() {
               <ProtectedRoute requiredRole="trainer">
                 <TrainerLayout>
                   <ClientsPage />
+                </TrainerLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/trainer/clients/:id"
+            element={
+              <ProtectedRoute requiredRole="trainer">
+                <TrainerLayout>
+                  <ClientePerfilPage />
                 </TrainerLayout>
               </ProtectedRoute>
             }

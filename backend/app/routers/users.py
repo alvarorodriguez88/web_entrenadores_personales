@@ -29,3 +29,7 @@ def get_client_profile(client: Cliente = Depends(get_current_client), db: Sessio
 @router.put("/clients/me", response_model=ClientResponse)
 def update_client_profile(data: ClientUpdate, client: Cliente = Depends(get_current_client), db: Session = Depends(get_db)):
     return user_service.update_client_profile(db, client.id_usuario, data)
+
+@router.get("/clients/{id_client}", response_model=ClientResponse)
+def get_client_by_id(id_client: int, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
+    return user_service.get_client_by_id(db, trainer.id_usuario, id_client)
