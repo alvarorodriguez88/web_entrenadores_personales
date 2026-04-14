@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Table  from '../../components/shared/Table'
 import Modal  from '../../components/shared/Modal'
 import Button from '../../components/shared/Button'
 import Input  from '../../components/shared/Input'
+import { usersApi } from '../../services/api'
 
 const SEXO_OPTIONS = [
   { value: 'M', label: 'Masculino' },
@@ -12,19 +13,12 @@ const SEXO_OPTIONS = [
 ]
 
 const columnasClientes = [
-  { key: 'nombre',           label: 'Cliente'           },
-  { key: 'objetivo',         label: 'Objetivo'          },
-  { key: 'rutina_actual',    label: 'Rutina actual'      },
-  { key: 'cumplimiento',     label: 'Cumplimiento'       },
-  { key: 'ultima_actividad', label: 'Última actividad'   },
-  { key: 'estado',           label: 'Estado'             },
-]
-
-// TODO: sustituir por GET /api/v1/users/clients (cuando exista endpoint de lista)
-const clientesMock = [
-  { id: 1, nombre: 'Carlos García',   objetivo: 'Hipertrofia',     rutina_actual: 'Fuerza 4 días',  cumplimiento: '85%', ultima_actividad: 'Hace 1 día',   estado: 'Activo' },
-  { id: 2, nombre: 'Laura Martínez',  objetivo: 'Pérdida de peso', rutina_actual: 'Cardio + Tono',  cumplimiento: '45%', ultima_actividad: 'Hace 5 días',  estado: 'Alerta' },
-  { id: 3, nombre: 'Pedro Gómez',     objetivo: 'Rendimiento',     rutina_actual: 'Full Body Avanz',cumplimiento: '30%', ultima_actividad: 'Hace 8 días',  estado: 'Alerta' },
+  { key: 'nombre',           label: 'Cliente'          },
+  { key: 'nivel',            label: 'Nivel'            },
+  { key: 'rutina_actual',    label: 'Rutina actual'    },
+  { key: 'cumplimiento',     label: 'Cumplimiento'     },
+  { key: 'ultima_actividad', label: 'Última actividad' },
+  { key: 'estado',           label: 'Estado'           },
 ]
 
 const emptyForm = { nombre: '', apellidos: '', email: '', telefono: '', sexo: '', peso_kg: '', altura_cm: '', porcentaje_grasa: '' }
@@ -32,16 +26,46 @@ const emptyForm = { nombre: '', apellidos: '', email: '', telefono: '', sexo: ''
 function ClientesPage() {
   const navigate = useNavigate()
 
-  const [busqueda,  setBusqueda]  = useState('')
-  const [filtroGrupo, setFiltroGrupo] = useState('')
+  const [clientes,     setClientes]     = useState([])
+  const [loading,      setLoading]      = useState(true)
+  const [error,        setError]        = useState('')
+  const [busqueda,     setBusqueda]     = useState('')
+  const [filtroGrupo,  setFiltroGrupo]  = useState('')
   const [modalAbierto, setModalAbierto] = useState(false)
-  const [form,    setForm]    = useState(emptyForm)
-  const [errors,  setErrors]  = useState({})
-  const [success, setSuccess] = useState(false)
+  const [form,         setForm]         = useState(emptyForm)
+  const [errors,       setErrors]       = useState({})
+  const [success,      setSuccess]      = useState(false)
 
-  const filtrados = clientesMock.filter((c) =>
-    c.nombre.toLowerCase().includes(busqueda.toLowerCase())
-  )
+  useEffect(() => {
+    async function cargarClientes() {
+      setLoading(true)
+      setError('')
+      try {
+        const data = await usersApi.getTrainerClients()
+        setClientes(data)
+      } catch (err) {
+        setError(err.message || 'Error al cargar los clientes')
+      } finally {
+        setLoading(false)
+      }
+    }
+    cargarClientes()
+  }, [])
+
+  const filas = clientes
+    .map((c) => ({
+      id:               c.user.id_usuario,
+      nombre:           `${c.user.nombre} ${c.user.apellidos}`,
+      nivel:            c.nivel ?? '—',
+      // TODO: GET /api/v1/assignments/clients/{id} — rutina activa del cliente
+      rutina_actual:    '—',
+      // TODO: calcular cumplimiento real desde sesiones del cliente
+      cumplimiento:     '—',
+      // TODO: obtener última actividad desde sesiones del cliente
+      ultima_actividad: '—',
+      estado:           'Activo',
+    }))
+    .filter((c) => c.nombre.toLowerCase().includes(busqueda.toLowerCase()))
 
   function setField(k, v) { setForm((p) => ({ ...p, [k]: v })) }
 
@@ -68,7 +92,6 @@ function ClientesPage() {
 
       <h1 className="text-3xl font-black text-gray-900">Clientes</h1>
 
-      {/* Buscador + botón */}
       <div className="flex flex-wrap gap-3 items-end">
         <div className="flex-1 min-w-40">
           <Input placeholder="Nombre" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
@@ -79,18 +102,24 @@ function ClientesPage() {
         <Button onClick={() => setModalAbierto(true)}>Añadir cliente</Button>
       </div>
 
-      {/* Tabla */}
       <div>
         <p className="text-sm font-semibold text-gray-700 mb-2">Tabla de clientes</p>
-        <Table
-          columns={columnasClientes}
-          data={filtrados}
-          emptyMessage="No se encontraron clientes"
-          onRowClick={(row) => navigate(`/trainer/clients/${row.id}`)}
-        />
+        {loading ? (
+          <div className="flex items-center justify-center h-32">
+            <span className="w-8 h-8 border-4 border-[#1D7FD8] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : error ? (
+          <p className="text-sm text-red-500 py-4">{error}</p>
+        ) : (
+          <Table
+            columns={columnasClientes}
+            data={filas}
+            emptyMessage="No hay clientes registrados"
+            onRowClick={(row) => navigate(`/trainer/clients/${row.id}`)}
+          />
+        )}
       </div>
 
-      {/* Modal añadir cliente */}
       <Modal isOpen={modalAbierto} onClose={cerrar} title="Añadir cliente">
         {success ? (
           <div className="flex flex-col items-center gap-4 py-6">
@@ -103,7 +132,6 @@ function ClientesPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-5">
-            {/* Datos personales */}
             <div>
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Datos del cliente</p>
               <div className="flex flex-col gap-3">
@@ -118,7 +146,6 @@ function ClientesPage() {
               </div>
             </div>
 
-            {/* Datos físicos */}
             <div>
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Datos físicos del cliente</p>
               <div className="grid grid-cols-2 gap-3">

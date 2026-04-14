@@ -2,11 +2,9 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, User } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { useAuth } from '../../context/AuthContext'
+import { usersApi, metricsApi } from '../../services/api'
 import Button from '../../components/shared/Button'
 import Card   from '../../components/shared/Card'
-
-const API_BASE = 'http://localhost:8080/api/v1'
 
 // TODO: sustituir por datos reales de sesionRutina del cliente
 const cumplimientoMock = [
@@ -19,34 +17,33 @@ const cumplimientoMock = [
 ]
 
 function ClientePerfilPage() {
-  const { id }      = useParams()
-  const { user }    = useAuth()
-  const navigate    = useNavigate()
+  const { id }   = useParams()
+  const navigate = useNavigate()
 
   const [cliente,  setCliente]  = useState(null)
   const [loading,  setLoading]  = useState(true)
   const [error,    setError]    = useState('')
+  const [metricas, setMetricas] = useState([])
 
   useEffect(() => {
-    async function cargarCliente() {
+    async function cargarDatos() {
       setLoading(true)
       setError('')
       try {
-        const res = await fetch(`${API_BASE}/users/clients/${id}`, {
-          headers: { Authorization: `Bearer ${user.access_token}` },
-        })
-        if (res.status === 404) { setError('Cliente no encontrado'); return }
-        if (!res.ok)            { setError('Error al cargar el cliente'); return }
-        const data = await res.json()
-        setCliente(data)
-      } catch {
-        setError('Error al conectar con el servidor')
+        const [clienteData, metricasData] = await Promise.all([
+          usersApi.getClientById(id),
+          metricsApi.getClientMetrics(id),
+        ])
+        setCliente(clienteData)
+        setMetricas(metricasData)
+      } catch (err) {
+        setError(err.message || 'Error al cargar el cliente')
       } finally {
         setLoading(false)
       }
     }
-    cargarCliente()
-  }, [id, user.access_token])
+    cargarDatos()
+  }, [id])
 
   if (loading) {
     return (
@@ -68,7 +65,11 @@ function ClientePerfilPage() {
   }
 
   const nombre   = `${cliente.user.nombre} ${cliente.user.apellidos}`
-  const nivel    = cliente.nivel    ?? '—'
+  const nivel    = cliente.nivel ?? '—'
+
+  const ultimaMetrica = metricas.length > 0
+    ? metricas.reduce((a, b) => (a.fecha >= b.fecha ? a : b))
+    : null
 
   return (
     <div className="p-8 flex flex-col gap-6">
@@ -84,7 +85,6 @@ function ClientePerfilPage() {
 
       <h1 className="text-3xl font-black text-gray-900">Clientes</h1>
 
-      {/* Cabecera del cliente */}
       <Card>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -106,6 +106,27 @@ function ClientePerfilPage() {
             <Button size="sm">Asignar rutina</Button>
           </div>
         </div>
+      </Card>
+
+      <Card title="Métricas físicas">
+        {ultimaMetrica ? (
+          <div className="flex divide-x divide-gray-200">
+            {[
+              { label: 'Peso',       value: ultimaMetrica.peso_kg           != null ? `${ultimaMetrica.peso_kg} kg`  : '—' },
+              { label: 'Altura',     value: ultimaMetrica.altura_cm         != null ? `${ultimaMetrica.altura_cm} cm`: '—' },
+              { label: '% Grasa',    value: ultimaMetrica.grasa_pct         != null ? `${ultimaMetrica.grasa_pct}%`  : '—' },
+            ].map((m) => (
+              <div key={m.label} className="flex-1 flex flex-col items-center gap-1 px-4 py-2">
+                <p className="text-xl font-bold text-gray-800">{m.value}</p>
+                <p className="text-xs text-gray-500">{m.label}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-400 text-center py-2">
+            Sin métricas registradas
+          </p>
+        )}
       </Card>
 
       {/* Rendimiento */}

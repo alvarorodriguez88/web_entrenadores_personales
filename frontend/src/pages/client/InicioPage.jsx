@@ -1,30 +1,19 @@
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { assignmentsApi, metricsApi } from '../../services/api'
 import Card   from '../../components/shared/Card'
 import Button from '../../components/shared/Button'
 
 // TODO: sustituir por GET /api/v1/assignments/me/sessions — sesiones completadas esta semana
 const diasEntrenadosMock = [0, 1] // índices 0=Lun … 6=Dom de la semana actual
 
-// TODO: sustituir por métricas reales del cliente (sesiones, carga, cumplimiento)
-const metricasMock = [
-  { label: 'Sesiones esta semana', value: '2 / 4' },
-  { label: 'Carga total (kg)',      value: '3.240' },
-  { label: 'Cumplimiento',          value: '85%'   },
-]
-
-// TODO: sustituir por GET /api/v1/assignments/me — asignación activa
-const rutinaHoyMock = {
-  nombre: 'Fuerza — Tren superior',
-  info:   'Día 3 de 4 · 6 ejercicios · ~60 min',
-}
-
 const DAY_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
 function getWeekDays() {
   const today = new Date()
-  const dow   = today.getDay()                        // 0=Dom, 1=Lun …
-  const diff  = dow === 0 ? -6 : 1 - dow             // desplazamiento al lunes
+  const dow   = today.getDay()
+  const diff  = dow === 0 ? -6 : 1 - dow
   const monday = new Date(today)
   monday.setDate(today.getDate() + diff)
 
@@ -45,6 +34,64 @@ function InicioPage() {
   const weekDays = getWeekDays()
   const todayIdx = weekDays.findIndex((d) => d.isToday)
 
+  const [asignacion, setAsignacion] = useState(null)
+  const [metricas,   setMetricas]   = useState([])
+  const [loading,    setLoading]    = useState(true)
+  const [error,      setError]      = useState('')
+
+  useEffect(() => {
+    async function cargarDatos() {
+      setLoading(true)
+      setError('')
+      try {
+        const [assignments, metricasData] = await Promise.allSettled([
+          assignmentsApi.getMyAssignments(),
+          metricsApi.getMyMetrics(),
+        ])
+
+        if (assignments.status === 'fulfilled') {
+          const activa = assignments.value.find((a) => a.estado === 'ACTIVA') ?? null
+          setAsignacion(activa)
+        }
+
+        if (metricasData.status === 'fulfilled') {
+          setMetricas(metricasData.value)
+        }
+      } catch (err) {
+        setError(err.message || 'Error al cargar los datos')
+      } finally {
+        setLoading(false)
+      }
+    }
+    cargarDatos()
+  }, [user.id])
+
+  const ultimaMetrica = metricas.length > 0
+    ? metricas.reduce((a, b) => (a.fecha >= b.fecha ? a : b))
+    : null
+
+  const metricasRow = [
+    { label: 'Peso',    value: ultimaMetrica?.peso_kg          != null ? `${ultimaMetrica.peso_kg} kg`   : '—' },
+    { label: 'Altura',  value: ultimaMetrica?.altura_cm        != null ? `${ultimaMetrica.altura_cm} cm` : '—' },
+    { label: '% Grasa', value: ultimaMetrica?.grasa_pct        != null ? `${ultimaMetrica.grasa_pct}%`   : '—' },
+  ]
+
+  if (loading) {
+    return (
+      <div className="p-8 flex items-center justify-center h-64">
+        <span className="w-8 h-8 border-4 border-[#1D7FD8] border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="p-8 flex items-center justify-center h-64">
+        <p className="text-gray-500">{error}</p>
+      </div>
+    )
+  }
+
   return (
     <div className="p-8 flex flex-col gap-8">
 
@@ -64,6 +111,7 @@ function InicioPage() {
 
         <Card>
           {/* Calendario semanal */}
+          {/* TODO: sustituir diasEntrenadosMock con assignmentsApi.getMySessions() filtrado por semana actual */}
           <div className="flex gap-2 mb-5">
             {weekDays.map((day, i) => {
               const trained = diasEntrenadosMock.includes(i)
@@ -87,9 +135,9 @@ function InicioPage() {
             })}
           </div>
 
-          {/* Métricas separadas por divisores */}
+          {/* Métricas físicas */}
           <div className="flex divide-x divide-gray-200">
-            {metricasMock.map((m) => (
+            {metricasRow.map((m) => (
               <div key={m.label} className="flex-1 flex flex-col items-center gap-1 px-4 py-2">
                 <p className="text-xl font-bold text-gray-800">{m.value}</p>
                 <p className="text-xs text-gray-500 text-center leading-tight">{m.label}</p>
@@ -103,22 +151,30 @@ function InicioPage() {
       <section className="flex flex-col gap-4">
         <h2 className="text-lg font-bold text-gray-800">Tu entrenamiento de hoy</h2>
 
-        {/* TODO: reemplazar rutinaHoyMock con GET /api/v1/assignments/me */}
-        <Card>
-          <div className="flex items-center justify-between gap-6">
-            <div className="flex flex-col gap-2 flex-1">
-              <p className="font-bold text-gray-900 text-lg leading-tight">
-                {rutinaHoyMock.nombre}
-              </p>
-              <span className="self-start text-sm text-[#1D7FD8] bg-blue-50 px-3 py-1 rounded-lg">
-                {rutinaHoyMock.info}
-              </span>
+        {asignacion ? (
+          <Card>
+            <div className="flex items-center justify-between gap-6">
+              <div className="flex flex-col gap-2 flex-1">
+                {/* TODO: mostrar nombre real cuando AssignmentResponse incluya datos de rutina */}
+                <p className="font-bold text-gray-900 text-lg leading-tight">
+                  Rutina #{asignacion.id_rutina}
+                </p>
+                <span className="self-start text-sm text-[#1D7FD8] bg-blue-50 px-3 py-1 rounded-lg">
+                  Desde {new Date(asignacion.fecha_inicio).toLocaleDateString('es-ES')}
+                </span>
+              </div>
+              <Button onClick={() => navigate('/client/entrenamiento')}>
+                Comenzar entreno
+              </Button>
             </div>
-            <Button onClick={() => navigate('/client/exercises')}>
-              Comenzar entreno
-            </Button>
-          </div>
-        </Card>
+          </Card>
+        ) : (
+          <Card>
+            <p className="text-sm text-gray-400 text-center py-4">
+              No tienes ninguna rutina asignada actualmente
+            </p>
+          </Card>
+        )}
       </section>
 
       {/* ── Estado general + Esta semana ── */}
@@ -134,7 +190,7 @@ function InicioPage() {
           </div>
         </Card>
 
-        {/* TODO: sustituir por GET /api/v1/assignments/me — planning semanal */}
+        {/* TODO: sustituir diasEntrenadosMock con sesiones reales */}
         <Card title="Esta semana">
           <div className="flex flex-col gap-2">
             {DAY_LABELS.map((label, i) => {

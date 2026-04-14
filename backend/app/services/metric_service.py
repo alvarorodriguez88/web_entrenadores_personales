@@ -6,8 +6,13 @@ from app.schemas.metric import PhysicalMetricCreate, PhysicalMetricUpdate
 from app.services.assignment_service import _verify_client_belongs_to_trainer
 
 
-def get_physical_metrics(db: Session, client_id: int, trainer_id: int) -> list[MetricaFisica]:
+def get_physical_metrics_trainer(db: Session, client_id: int, trainer_id: int) -> list[MetricaFisica]:
     _verify_client_belongs_to_trainer(db, client_id, trainer_id)
+    return db.query(MetricaFisica).filter(
+        MetricaFisica.id_cliente == client_id
+    ).order_by(MetricaFisica.fecha_registro).all()
+
+def get_physical_metrics_client(db: Session, client_id: int) -> list[MetricaFisica]:
     return db.query(MetricaFisica).filter(
         MetricaFisica.id_cliente == client_id
     ).order_by(MetricaFisica.fecha_registro).all()
@@ -27,9 +32,22 @@ def get_physical_metric_by_id(db: Session, client_id: int, metric_id: int, train
         )
     return metric
 
-def create_physical_metric(db: Session, client_id: int, data: PhysicalMetricCreate, trainer_id: int) -> MetricaFisica:
+def create_physical_metric_trainer(db: Session, client_id: int, data: PhysicalMetricCreate, trainer_id: int) -> MetricaFisica:
     _verify_client_belongs_to_trainer(db, client_id, trainer_id)
 
+    metric = MetricaFisica(
+        id_cliente=client_id,
+        peso_kg=data.peso_kg,
+        altura_cm=data.altura_cm,
+        grasa_pct=data.grasa_pct,
+        comentario=data.comentario,
+    )
+    db.add(metric)
+    db.commit()
+    db.refresh(metric)
+    return metric
+
+def create_physical_metric_client(db: Session, client_id: int, data: PhysicalMetricCreate) -> MetricaFisica:
     metric = MetricaFisica(
         id_cliente=client_id,
         peso_kg=data.peso_kg,

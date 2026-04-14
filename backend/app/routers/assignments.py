@@ -34,7 +34,7 @@ def delete_assignment(assignment_id: int, trainer: Entrenador = Depends(get_curr
 
 @router.get("/clients/{client_id}", response_model=list[AssignmentResponse])
 def get_client_assignments(client_id: int, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
-    return assignment_service.get_client_assignments(db, client_id, trainer.id_usuario)
+    return assignment_service.get_client_assignments_trainer(db, client_id, trainer.id_usuario)
 
 @router.get("/clients/{client_id}/history", response_model=list[AssignmentResponse])
 def get_client_assignment_history(client_id: int, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
@@ -47,6 +47,10 @@ def create_assignment(client_id: int, data: AssignmentCreate, trainer: Entrenado
 @router.get("/{assignment_id}/exercises", response_model=list[AssignmentExerciseResponse])
 def get_assignment_exercises(assignment_id: int, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
     return assignment_service.get_assignment_exercises(db, assignment_id, trainer.id_usuario, is_trainer=True)
+
+@router.get("/me", response_model=list[AssignmentResponse])
+def get_my_assignments(client: Cliente = Depends(get_current_client), db: Session = Depends(get_db)):
+    return assignment_service.get_client_assignments_client(db, client.id_usuario)
 
 @router.get("/me/{assignment_id}/exercises", response_model=list[AssignmentExerciseResponse])
 def get_assignment_exercises_client(assignment_id: int, client: Cliente = Depends(get_current_client), db: Session = Depends(get_db)):
