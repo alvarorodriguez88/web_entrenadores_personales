@@ -1,25 +1,20 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { authApi, usersApi } from '../../services/api'
 import Input from '../../components/shared/Input'
 import Button from '../../components/shared/Button'
 
-const API_BASE = 'http://localhost:8080/api/v1'
+async function fetchProfile() {
+  try {
+    const data = await usersApi.getTrainerProfile()
+    return { id: data.user.id_usuario, nombre: data.user.nombre, role: 'trainer' }
+  } catch {}
 
-async function fetchProfile(token) {
-  const headers = { Authorization: `Bearer ${token}` }
-
-  const trainerRes = await fetch(`${API_BASE}/users/trainers/me`, { headers })
-  if (trainerRes.ok) {
-    const data = await trainerRes.json()
-    return { nombre: data.user.nombre, role: 'trainer' }
-  }
-
-  const clientRes = await fetch(`${API_BASE}/users/clients/me`, { headers })
-  if (clientRes.ok) {
-    const data = await clientRes.json()
-    return { nombre: data.user.nombre, role: 'client' }
-  }
+  try {
+    const data = await usersApi.getClientProfile()
+    return { id: data.user.id_usuario, nombre: data.user.nombre, role: 'client' }
+  } catch {}
 
   throw new Error('No se pudo determinar el rol del usuario')
 }
@@ -39,20 +34,11 @@ function LoginPage() {
     setLoading(true)
 
     try {
-      const res = await fetch(`${API_BASE}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      })
+      const { access_token } = await authApi.login(email, password)
 
-      if (!res.ok) {
-        const data = await res.json()
-        setError(data.detail || 'Credenciales incorrectas')
-        return
-      }
+      localStorage.setItem('user', JSON.stringify({ access_token }))
 
-      const { access_token } = await res.json()
-      const { nombre, role } = await fetchProfile(access_token)
+      const { nombre, role } = await fetchProfile()
 
       login({ nombre, role, access_token })
       navigate(role === 'trainer' ? '/trainer/inicio' : '/client/inicio')
@@ -73,12 +59,11 @@ function LoginPage() {
             <img src={heroImg} alt="" className="w-full h-full object-cover" /> */}
       </div>
 
-      {/* Formulario derecha */}
       <div className="w-full md:w-1/2 flex items-center justify-center px-10 py-12 bg-white">
         <div className="w-full max-w-sm">
 
           <h1 className="text-3xl font-black text-gray-900 leading-tight mb-8">
-            ¡Nos alegra verte<br />de nuevo!
+            ¡Nos alegra verte de nuevo!
           </h1>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">

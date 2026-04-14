@@ -1,9 +1,11 @@
+import { useState, useEffect } from 'react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from 'recharts'
 import KPICard from '../../components/shared/KPICard'
 import Card   from '../../components/shared/Card'
+import { metricsApi } from '../../services/api'
 
 // TODO: sustituir por GET /api/v1/assignments/me — cumplimiento y sesiones
 const kpisMock = [
@@ -33,16 +35,6 @@ const tipoEjerciciosData = [
 ]
 const DONUT_COLORS = ['#1D7FD8', '#34d399', '#f59e0b', '#a78bfa']
 
-// TODO: sustituir por GET /api/v1/metrics/clients/{id} — historial de peso real
-const pesoData = [
-  { mes: 'Nov', peso: 82.0 },
-  { mes: 'Dic', peso: 81.2 },
-  { mes: 'Ene', peso: 80.5 },
-  { mes: 'Feb', peso: 79.8 },
-  { mes: 'Mar', peso: 79.1 },
-  { mes: 'Abr', peso: 78.4 },
-]
-
 const tooltipStyle = {
   borderRadius: '12px',
   border: 'none',
@@ -51,6 +43,51 @@ const tooltipStyle = {
 }
 
 function DashboardPage() {
+  const [metricas, setMetricas] = useState([])
+  const [loading,  setLoading]  = useState(true)
+  const [error,    setError]    = useState('')
+
+  useEffect(() => {
+    async function cargarMetricas() {
+      setLoading(true)
+      setError('')
+      try {
+        const data = await metricsApi.getMyMetrics()
+        setMetricas(data)
+      } catch (err) {
+        setError(err.message || 'Error al cargar las métricas')
+      } finally {
+        setLoading(false)
+      }
+    }
+    cargarMetricas()
+  }, [])
+
+  // Ordenar por fecha y mapear para el gráfico de peso
+  const pesoData = [...metricas]
+    .sort((a, b) => (a.fecha > b.fecha ? 1 : -1))
+    .filter((m) => m.peso_kg != null)
+    .map((m) => ({
+      mes:  new Date(m.fecha).toLocaleDateString('es-ES', { month: 'short', year: '2-digit' }),
+      peso: m.peso_kg,
+    }))
+
+  if (loading) {
+    return (
+      <div className="p-8 flex items-center justify-center h-64">
+        <span className="w-8 h-8 border-4 border-[#1D7FD8] border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="p-8 flex items-center justify-center h-64">
+        <p className="text-gray-500">{error}</p>
+      </div>
+    )
+  }
+
   return (
     <div className="p-8 flex flex-col gap-8">
 
@@ -148,43 +185,50 @@ function DashboardPage() {
           </div>
         </Card>
 
-        {/* TODO: GET /api/v1/metrics/clients/{id} — historial de peso del cliente */}
         <Card title="Progreso físico">
-          <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={pesoData} margin={{ top: 4, right: 16, left: -16, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis
-                  dataKey="mes"
-                  tick={{ fontSize: 12, fill: '#9ca3af' }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 12, fill: '#9ca3af' }}
-                  axisLine={false}
-                  tickLine={false}
-                  domain={['auto', 'auto']}
-                  unit=" kg"
-                />
-                <Tooltip
-                  formatter={(v) => [`${v} kg`, 'Peso']}
-                  contentStyle={tooltipStyle}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="peso"
-                  stroke="#34d399"
-                  strokeWidth={2.5}
-                  dot={{ r: 4, fill: '#34d399', strokeWidth: 0 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-          <p className="text-xs text-gray-400 text-center mt-2">
-            Evolución del peso corporal (kg)
-          </p>
+          {pesoData.length > 0 ? (
+            <>
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={pesoData} margin={{ top: 4, right: 16, left: -16, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis
+                      dataKey="mes"
+                      tick={{ fontSize: 12, fill: '#9ca3af' }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 12, fill: '#9ca3af' }}
+                      axisLine={false}
+                      tickLine={false}
+                      domain={['auto', 'auto']}
+                      unit=" kg"
+                    />
+                    <Tooltip
+                      formatter={(v) => [`${v} kg`, 'Peso']}
+                      contentStyle={tooltipStyle}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="peso"
+                      stroke="#34d399"
+                      strokeWidth={2.5}
+                      dot={{ r: 4, fill: '#34d399', strokeWidth: 0 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <p className="text-xs text-gray-400 text-center mt-2">
+                Evolución del peso corporal (kg)
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-gray-400 text-center py-4">
+              Sin registros de peso disponibles
+            </p>
+          )}
         </Card>
 
       </div>

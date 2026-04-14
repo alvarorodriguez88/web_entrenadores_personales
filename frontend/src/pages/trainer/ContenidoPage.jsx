@@ -1,13 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Upload } from 'lucide-react'
-import { useAuth } from '../../context/AuthContext'
+import { exercisesApi, routinesApi, assignmentsApi, usersApi } from '../../services/api'
 import TabBar    from '../../components/shared/TabBar'
 import Table     from '../../components/shared/Table'
 import Modal     from '../../components/shared/Modal'
 import Button    from '../../components/shared/Button'
 import Input     from '../../components/shared/Input'
 
-const API_BASE = 'http://localhost:8080/api/v1'
 const TABS     = ['Ejercicios', 'Rutinas', 'Multimedia']
 
 const NIVEL_OPTIONS = [
@@ -18,29 +17,22 @@ const NIVEL_OPTIONS = [
 
 const DIFICULTAD_OPTIONS = NIVEL_OPTIONS
 
-// ─────────────────────────────────────────────────────────────────
-// PESTAÑA EJERCICIOS
-// ─────────────────────────────────────────────────────────────────
+
 const columnasEjercicios = [
   { key: 'nombre',         label: 'Ejercicio'      },
   { key: 'grupo_muscular', label: 'Grupo muscular' },
   { key: 'dificultad',     label: 'Dificultad'     },
   { key: 'equipamiento',   label: 'Equipamiento'   },
-  { key: 'uso_rutinas',    label: 'Uso en rutinas' },
-]
-
-// TODO: sustituir por GET /api/v1/exercises
-const ejerciciosMock = [
-  { nombre: 'Press banca', grupo_muscular: 'Pecho',   dificultad: 'INTERMEDIO',   equipamiento: 'Barra',      uso_rutinas: 3 },
-  { nombre: 'Sentadilla',  grupo_muscular: 'Piernas', dificultad: 'INTERMEDIO',   equipamiento: 'Barra',      uso_rutinas: 5 },
-  { nombre: 'Peso muerto', grupo_muscular: 'Espalda', dificultad: 'AVANZADO',     equipamiento: 'Barra',      uso_rutinas: 2 },
-  { nombre: 'Pull-up',     grupo_muscular: 'Espalda', dificultad: 'INTERMEDIO',   equipamiento: 'Barra fija', uso_rutinas: 4 },
-  { nombre: 'Plancha',     grupo_muscular: 'Core',    dificultad: 'PRINCIPIANTE', equipamiento: 'Ninguno',    uso_rutinas: 6 },
 ]
 
 const emptyEjForm = { nombre: '', descripcion: '', dificultad: '', grupo_muscular: '', equipamiento: '', video_url: '' }
 
-function TabEjercicios({ user }) {
+
+function TabEjercicios() {
+  const [ejercicios,   setEjercicios]   = useState([])
+  const [loadingEj,    setLoadingEj]    = useState(true)
+  const [errorEj,      setErrorEj]      = useState('')
+
   const [busqueda,    setBusqueda]    = useState('')
   const [filtroGrupo, setFiltroGrupo] = useState('')
   const [filtroDif,   setFiltroDif]   = useState('')
@@ -50,11 +42,26 @@ function TabEjercicios({ user }) {
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
-  const filtrados = ejerciciosMock.filter((e) =>
+  async function cargarEjercicios() {
+    setLoadingEj(true)
+    setErrorEj('')
+    try {
+      const data = await exercisesApi.getExercises()
+      setEjercicios(data)
+    } catch (err) {
+      setErrorEj(err.message || 'Error al cargar ejercicios')
+    } finally {
+      setLoadingEj(false)
+    }
+  }
+
+  useEffect(() => { cargarEjercicios() }, [])
+
+  const filtrados = ejercicios.filter((e) =>
     e.nombre.toLowerCase().includes(busqueda.toLowerCase()) &&
-    (!filtroGrupo || e.grupo_muscular.toLowerCase().includes(filtroGrupo.toLowerCase())) &&
+    (!filtroGrupo || (e.grupo_muscular ?? '').toLowerCase().includes(filtroGrupo.toLowerCase())) &&
     (!filtroDif   || e.dificultad === filtroDif) &&
-    (!filtroEquip || e.equipamiento.toLowerCase().includes(filtroEquip.toLowerCase()))
+    (!filtroEquip || (e.equipamiento ?? '').toLowerCase().includes(filtroEquip.toLowerCase()))
   )
 
   function setField(k, v) { setForm((p) => ({ ...p, [k]: v })) }
@@ -64,22 +71,17 @@ function TabEjercicios({ user }) {
     if (!form.nombre.trim()) { setError('El nombre es obligatorio'); return }
     setError(''); setSaving(true)
     try {
-      const res = await fetch(`${API_BASE}/exercises`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.access_token}` },
-        body: JSON.stringify({
-          nombre:         form.nombre,
-          descripcion:    form.descripcion    || null,
-          dificultad:     form.dificultad     || null,
-          grupo_muscular: form.grupo_muscular || null,
-          equipamiento:   form.equipamiento   || null,
-          video_url:      form.video_url       || null,
-        }),
+      await exercisesApi.createExercise({
+        nombre:         form.nombre,
+        descripcion:    form.descripcion    || null,
+        dificultad:     form.dificultad     || null,
+        grupo_muscular: form.grupo_muscular || null,
+        equipamiento:   form.equipamiento   || null,
+        video_url:      form.video_url       || null,
       })
-      if (!res.ok) { const d = await res.json(); setError(d.detail || 'Error al crear'); return }
-      // TODO: añadir el ejercicio creado al estado local o refetch
       cerrar()
-    } catch { setError('Error al conectar con el servidor') }
+      cargarEjercicios()
+    } catch (err) { setError(err.message || 'Error al crear') }
     finally { setSaving(false) }
   }
 
@@ -103,7 +105,15 @@ function TabEjercicios({ user }) {
 
       <div className="mt-4">
         <p className="text-sm font-semibold text-gray-700 mb-2">Tabla de ejercicios</p>
-        <Table columns={columnasEjercicios} data={filtrados} emptyMessage="No se encontraron ejercicios" />
+        {loadingEj ? (
+          <div className="flex justify-center py-12">
+            <span className="w-7 h-7 border-4 border-[#1D7FD8] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : errorEj ? (
+          <p className="text-sm text-red-500 py-8 text-center">{errorEj}</p>
+        ) : (
+          <Table columns={columnasEjercicios} data={filtrados} emptyMessage="No se encontraron ejercicios" />
+        )}
       </div>
 
       <Modal isOpen={modalAbierto} onClose={cerrar} title="Crear ejercicio">
@@ -135,23 +145,6 @@ function TabEjercicios({ user }) {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────
-// PESTAÑA RUTINAS
-// ─────────────────────────────────────────────────────────────────
-
-// TODO: sustituir por GET /api/v1/routines
-const rutinasMock = [
-  { id: 1, nombre: 'Fuerza 4 días',   nivel: 'INTERMEDIO',   objetivo: 'Hipertrofia',      descripcion: 'Rutina de fuerza con énfasis en grandes grupos musculares.' },
-  { id: 2, nombre: 'Cardio + Tono',   nivel: 'PRINCIPIANTE', objetivo: 'Pérdida de peso',  descripcion: 'Combinación de cardio y ejercicios de tonificación.' },
-  { id: 3, nombre: 'Full Body Avanz', nivel: 'AVANZADO',     objetivo: 'Rendimiento',      descripcion: 'Entrenamiento de cuerpo completo para atletas avanzados.' },
-]
-
-// TODO: sustituir por GET /api/v1/users/clients
-const clientesMock = [
-  { value: '1', label: 'Carlos García'  },
-  { value: '2', label: 'Laura Martínez' },
-  { value: '3', label: 'Pedro Gómez'   },
-]
 
 const emptyRutinaForm = { nombre: '', objetivo: '', nivel: '', descripcion: '' }
 const newBloque = () => ({ dia: 1, ejercicios: [''] })
@@ -161,8 +154,8 @@ function RutinaCard({ rutina, onAsignar }) {
     <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5 flex flex-col gap-3">
       <div className="flex flex-col gap-1">
         <p className="font-bold text-gray-800">{rutina.nombre}</p>
-        <p className="text-xs text-gray-500">Nivel: {rutina.nivel}</p>
-        <p className="text-xs text-gray-500">Objetivo: {rutina.objetivo}</p>
+        <p className="text-xs text-gray-500">Nivel: {rutina.nivel ?? '—'}</p>
+        <p className="text-xs text-gray-500">Objetivo: {rutina.objetivo ?? '—'}</p>
         <p className="text-xs text-gray-400 mt-1 line-clamp-2">{rutina.descripcion}</p>
       </div>
       <div className="mt-auto">
@@ -172,18 +165,23 @@ function RutinaCard({ rutina, onAsignar }) {
   )
 }
 
-function TabRutinas({ user }) {
+function TabRutinas() {
+  const [rutinas,        setRutinas]        = useState([])
+  const [loadingRutinas, setLoadingRutinas] = useState(true)
+  const [errorRutinas,   setErrorRutinas]   = useState('')
+
+  const [clientes,        setClientes]        = useState([])
+  const [loadingClientes, setLoadingClientes] = useState(false)
+
   const [busqueda,    setBusqueda]    = useState('')
   const [filtroObj,   setFiltroObj]   = useState('')
 
-  // Modal crear rutina
   const [modalCrear, setModalCrear] = useState(false)
   const [formR,   setFormR]  = useState(emptyRutinaForm)
   const [bloques, setBloques] = useState([newBloque()])
   const [errorR,  setErrorR] = useState('')
   const [savingR, setSavingR] = useState(false)
 
-  // Modal asignar rutina
   const [modalAsignar,    setModalAsignar]    = useState(false)
   const [rutinaAsignar,   setRutinaAsignar]   = useState(null)
   const [clienteId,       setClienteId]       = useState('')
@@ -191,12 +189,45 @@ function TabRutinas({ user }) {
   const [errorA,          setErrorA]          = useState('')
   const [savingA,         setSavingA]         = useState(false)
 
-  const filtradas = rutinasMock.filter((r) =>
+  async function cargarRutinas() {
+    setLoadingRutinas(true)
+    setErrorRutinas('')
+    try {
+      const data = await routinesApi.getRoutines()
+      setRutinas(data)
+    } catch (err) {
+      setErrorRutinas(err.message || 'Error al cargar rutinas')
+    } finally {
+      setLoadingRutinas(false)
+    }
+  }
+
+  async function cargarClientes() {
+    setLoadingClientes(true)
+    try {
+      const data = await usersApi.getTrainerClients()
+      setClientes(data)
+    } catch {
+    } finally {
+      setLoadingClientes(false)
+    }
+  }
+
+  useEffect(() => {
+    cargarRutinas()
+    cargarClientes()
+  }, [])
+
+  const clienteOptions = clientes.map((c) => ({
+    value: String(c.id_usuario),
+    label: `${c.user.nombre} ${c.user.apellidos}`,
+  }))
+
+  const filtradas = rutinas.filter((r) =>
     r.nombre.toLowerCase().includes(busqueda.toLowerCase()) &&
-    (!filtroObj || r.objetivo.toLowerCase().includes(filtroObj.toLowerCase()))
+    (!filtroObj || (r.objetivo ?? '').toLowerCase().includes(filtroObj.toLowerCase()))
   )
 
-  // ── Crear rutina ──
   function setFieldR(k, v) { setFormR((p) => ({ ...p, [k]: v })) }
 
   function addBloque() {
@@ -218,31 +249,23 @@ function TabRutinas({ user }) {
     if (!formR.nombre.trim()) { setErrorR('El nombre es obligatorio'); return }
     setErrorR(''); setSavingR(true)
     try {
-      // Paso 1: crear rutina
-      const res = await fetch(`${API_BASE}/routines`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.access_token}` },
-        body: JSON.stringify({ nombre: formR.nombre, objetivo: formR.objetivo || null, nivel: formR.nivel || null, descripcion: formR.descripcion || null }),
+      const rutina = await routinesApi.createRoutine({
+        nombre:      formR.nombre,
+        objetivo:    formR.objetivo    || null,
+        nivel:       formR.nivel       || null,
+        descripcion: formR.descripcion || null,
       })
-      if (!res.ok) { const d = await res.json(); setErrorR(d.detail || 'Error al crear la rutina'); return }
-      const rutina = await res.json()
 
-      // Paso 2: crear bloques
-      // TODO: cuando los bloques tengan ejercicios reales, añadir POST /routines/{id}/blocks/{blockId}/exercises
+      // TODO: cuando los bloques tengan ejercicios reales, añadir createBlockExercise
       for (let i = 0; i < bloques.length; i++) {
-        await fetch(`${API_BASE}/routines/${rutina.id_rutina}/blocks`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.access_token}` },
-          body: JSON.stringify({ dia_semana: bloques[i].dia, orden: i + 1 }),
-        })
+        await routinesApi.createBlock(rutina.id_rutina, { dia_semana: bloques[i].dia, orden: i + 1 })
       }
-      // TODO: refetch lista de rutinas
       cerrarCrear()
-    } catch { setErrorR('Error al conectar con el servidor') }
+      cargarRutinas()
+    } catch (err) { setErrorR(err.message || 'Error al crear la rutina') }
     finally { setSavingR(false) }
   }
 
-  // ── Asignar rutina ──
   function abrirAsignar(rutina) { setRutinaAsignar(rutina); setClienteId(''); setFechaInicio(''); setErrorA(''); setModalAsignar(true) }
   function cerrarAsignar() { setModalAsignar(false); setRutinaAsignar(null) }
 
@@ -250,15 +273,12 @@ function TabRutinas({ user }) {
     if (!clienteId) { setErrorA('Selecciona un cliente'); return }
     setErrorA(''); setSavingA(true)
     try {
-      // TODO: el body exacto depende del schema de AssignmentCreate — verificar con la API
-      const res = await fetch(`${API_BASE}/assignments/clients/${clienteId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.access_token}` },
-        body: JSON.stringify({ id_rutina: rutinaAsignar.id, fecha_inicio: fechaInicio || null }),
+      await assignmentsApi.createAssignment(clienteId, {
+        id_rutina:    rutinaAsignar.id_rutina,
+        fecha_inicio: fechaInicio || null,
       })
-      if (!res.ok) { const d = await res.json(); setErrorA(d.detail || 'Error al asignar'); return }
       cerrarAsignar()
-    } catch { setErrorA('Error al conectar con el servidor') }
+    } catch (err) { setErrorA(err.message || 'Error al asignar') }
     finally { setSavingA(false) }
   }
 
@@ -278,12 +298,18 @@ function TabRutinas({ user }) {
       {/* Grid de tarjetas */}
       <div className="mt-4">
         <p className="text-sm font-semibold text-gray-700 mb-3">Rutinas</p>
-        {filtradas.length === 0 ? (
+        {loadingRutinas ? (
+          <div className="flex justify-center py-12">
+            <span className="w-7 h-7 border-4 border-[#1D7FD8] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : errorRutinas ? (
+          <p className="text-sm text-red-500 py-8 text-center">{errorRutinas}</p>
+        ) : filtradas.length === 0 ? (
           <p className="text-sm text-gray-400 py-8 text-center">No se encontraron rutinas</p>
         ) : (
           <div className="grid grid-cols-3 gap-4">
             {filtradas.map((r) => (
-              <RutinaCard key={r.id} rutina={r} onAsignar={abrirAsignar} />
+              <RutinaCard key={r.id_rutina} rutina={r} onAsignar={abrirAsignar} />
             ))}
           </div>
         )}
@@ -357,8 +383,14 @@ function TabRutinas({ user }) {
           )}
           <div>
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Clientes a asignar</p>
-            {/* TODO: GET /api/v1/users/clients para cargar clientes reales del entrenador */}
-            <Input type="select" placeholder="Selecciona los clientes" value={clienteId} onChange={(e) => setClienteId(e.target.value)} options={clientesMock} error={errorA} />
+            <Input
+              type="select"
+              placeholder={loadingClientes ? 'Cargando clientes…' : 'Selecciona los clientes'}
+              value={clienteId}
+              onChange={(e) => setClienteId(e.target.value)}
+              options={clienteOptions}
+              error={errorA}
+            />
           </div>
           <div>
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Grupos a asignar</p>
@@ -486,7 +518,6 @@ function TabMultimedia() {
 // PÁGINA PRINCIPAL
 // ─────────────────────────────────────────────────────────────────
 function ContenidoPage() {
-  const { user }     = useAuth()
   const [activeTab, setActiveTab] = useState('Ejercicios')
 
   return (
@@ -494,8 +525,8 @@ function ContenidoPage() {
       <h1 className="text-3xl font-black text-gray-900">Contenido</h1>
       <TabBar tabs={TABS} active={activeTab} onChange={setActiveTab} />
       <div>
-        {activeTab === 'Ejercicios' && <TabEjercicios user={user} />}
-        {activeTab === 'Rutinas'    && <TabRutinas    user={user} />}
+        {activeTab === 'Ejercicios' && <TabEjercicios />}
+        {activeTab === 'Rutinas'    && <TabRutinas />}
         {activeTab === 'Multimedia' && <TabMultimedia />}
       </div>
     </div>
