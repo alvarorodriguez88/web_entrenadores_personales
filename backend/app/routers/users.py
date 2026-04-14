@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
+from typing import List
 
 from app.database import get_db
 from app.dependencies import get_current_trainer, get_current_client
@@ -33,3 +34,7 @@ def update_client_profile(data: ClientUpdate, client: Cliente = Depends(get_curr
 @router.get("/clients/{id_client}", response_model=ClientResponse)
 def get_client_by_id(id_client: int, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
     return user_service.get_client_by_id(db, trainer.id_usuario, id_client)
+
+@router.get("/clients", response_model=List[ClientResponse])
+def get_trainer_clients(trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
+    return user_service.get_trainer_clients(db, trainer.id_usuario)
