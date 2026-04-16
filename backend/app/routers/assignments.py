@@ -96,6 +96,10 @@ def update_session(assignment_id: int, session_id: int, data: SessionUpdate, cli
 def delete_session(assignment_id: int, session_id: int, client: Cliente = Depends(get_current_client), db: Session = Depends(get_db)):
     assignment_service.delete_session(db, assignment_id, session_id, client.id_usuario)
 
+@router.get("/me/sessions/{session_id}/logs", response_model=list[ExerciseLogResponse])
+def get_exercise_logs_client(session_id: int, client: Cliente = Depends(get_current_client), db: Session = Depends(get_db)):
+    return assignment_service.get_exercise_logs(db, session_id, client.id_usuario, is_trainer=False)
+
 @router.get("/sessions/{session_id}/logs", response_model=list[ExerciseLogResponse])
 def get_exercise_logs(session_id: int, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
     return assignment_service.get_exercise_logs(db, session_id, trainer.id_usuario, is_trainer=True)

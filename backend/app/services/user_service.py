@@ -5,6 +5,8 @@ from app.models.user import Usuario, Entrenador, Cliente
 from app.schemas.user import TrainerUpdate, ClientUpdate
 
 
+NIVEL_ORDER = {"PRINCIPIANTE": 1, "INTERMEDIO": 2, "AVANZADO": 3}
+
 def get_trainer_profile(db: Session, user_id: int) -> Entrenador:
     trainer = db.query(Entrenador).options(
         joinedload(Entrenador.user)
@@ -64,12 +66,14 @@ def update_client_profile(db: Session, user_id: int, data: ClientUpdate) -> Clie
         client.user.email = data.email
     if data.nivel is not None:
         client.nivel = data.nivel
+    if data.objetivo is not None:
+        client.objetivo = data.objetivo
 
     db.commit()
     db.refresh(client)
     return client
 
-def get_client_by_id(db: Session, trainer_id: int, client_id: int):
+def get_client_by_id(db: Session, trainer_id: int, client_id: int) -> Cliente:
     client = db.query(Cliente).options(
         joinedload(Cliente.user)
     ).filter(
@@ -80,7 +84,7 @@ def get_client_by_id(db: Session, trainer_id: int, client_id: int):
         raise HTTPException(status_code=404, detail="Client not found")
     return client
 
-def get_trainer_clients(db: Session, trainer_id: int):
+def get_trainer_clients(db: Session, trainer_id: int) -> list[Cliente]:
     clients = db.query(Cliente).options(
         joinedload(Cliente.user)
     ).filter(
@@ -88,7 +92,15 @@ def get_trainer_clients(db: Session, trainer_id: int):
     ).all()
     return clients
 
+def update_client_nivel_if_needed(client: Cliente, rutina_nivel: str) -> None:
+    if rutina_nivel is None:
+        return
 
+    current_order = NIVEL_ORDER.get(client.nivel, 0)
+    routine_order = NIVEL_ORDER.get(rutina_nivel, 0)
+
+    if routine_order > current_order:
+        client.nivel = rutina_nivel
 
 def _check_email_available(db: Session, email: str, current_user_id: int) -> None:
     existing = db.query(Usuario).filter(

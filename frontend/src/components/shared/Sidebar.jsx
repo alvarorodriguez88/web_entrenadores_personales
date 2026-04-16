@@ -14,14 +14,12 @@ function Sidebar({ navItems }) {
   return (
     <aside className="w-56 min-h-screen flex flex-col text-white bg-[#1e3a5f]">
 
-      {/* Logo */}
       <div className="px-5 pt-6 pb-5">
         <div className="w-12 h-12 rounded-xl bg-[#1D7FD8] flex items-center justify-center font-bold text-lg tracking-tight">
           L
         </div>
       </div>
 
-      {/* Navegación principal */}
       <nav className="flex-1 px-3 flex flex-col gap-1">
         {navItems.map(({ label, path, icon: Icon }) => (
           <NavLink
@@ -41,7 +39,6 @@ function Sidebar({ navItems }) {
         ))}
       </nav>
 
-      {/* Zona inferior */}
       <div className="px-3 pb-6 flex flex-col gap-1">
         <div className="border-t border-white/15 my-2" />
         <NavLink

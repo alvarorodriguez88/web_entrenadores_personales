@@ -21,7 +21,7 @@ class TrainerUpdate(BaseModel):
 class TrainerResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    user : UserBase
+    user: UserBase
     especialidad: Optional[str] = None
     bio: Optional[str] = None
 
@@ -30,11 +30,13 @@ class ClientUpdate(BaseModel):
     nombre: Optional[str] = None
     apellidos: Optional[str] = None
     nivel: Optional[str] = None
+    objetivo: Optional[str] = None
 
 class ClientResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    user : UserBase
-    nivel: str
+    user: UserBase
+    nivel: Optional[str] = None
+    objetivo: Optional[str] = None
     fecha_alta: datetime
     id_entrenador: int

@@ -10,6 +10,7 @@ from app.schemas.assignment import (
     ExerciseLogCreate, ExerciseLogUpdate,
     AssignmentExerciseCreate, AssignmentExerciseUpdate
 )
+from app.services.user_service import update_client_nivel_if_needed
 
 
 def get_assignments(db: Session, trainer_id: int) -> list[AsignacionRutina]:
@@ -56,7 +57,7 @@ def get_assignment_by_id(db: Session, assignment_id: int, trainer_id: int) -> As
     return assignment
 
 def create_assignment(db: Session, client_id: int, data: AssignmentCreate, trainer_id: int) -> AsignacionRutina:
-    _verify_client_belongs_to_trainer(db, client_id, trainer_id)
+    client = _verify_client_belongs_to_trainer(db, client_id, trainer_id)
 
     routine = db.query(Rutina).filter(
         Rutina.id_rutina == data.id_rutina,
@@ -78,6 +79,9 @@ def create_assignment(db: Session, client_id: int, data: AssignmentCreate, train
         notas=data.notas,
     )
     db.add(assignment)
+
+    update_client_nivel_if_needed(client, routine.nivel)
+
     db.commit()
     db.refresh(assignment)
     return assignment
@@ -158,6 +162,7 @@ def create_session(db: Session, assignment_id: int, data: SessionCreate, client_
         id_bloque_rutina=data.id_bloque_rutina,
         duracion_min=data.duracion_min,
         esfuerzo_rpe=data.esfuerzo_rpe,
+        conformidad=data.conformidad,
         comentario=data.comentario,
     )
     db.add(session)
@@ -172,6 +177,10 @@ def update_session(db: Session, assignment_id: int, session_id: int, data: Sessi
         session.duracion_min = data.duracion_min
     if data.esfuerzo_rpe is not None:
         session.esfuerzo_rpe = data.esfuerzo_rpe
+    if data.conformidad is not None:
+        session.conformidad = data.conformidad
+    if data.nota_rendimiento is not None:
+        session.nota_rendimiento = data.nota_rendimiento
     if data.comentario is not None:
         session.comentario = data.comentario
 

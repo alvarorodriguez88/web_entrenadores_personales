@@ -12,7 +12,7 @@ class AsignacionRutina(Base):
     id_cliente = Column(Integer, ForeignKey("cliente.id_usuario"), nullable=False)
     id_rutina = Column(Integer, ForeignKey("rutina.id_rutina"), nullable=False)
     fecha_inicio = Column(Date, nullable=False)
-    fecha_fin = Column(Date, nullable=True)
+    fecha_fin = Column(Date, nullable=False)
     estado = Column(
         Enum("ACTIVA", "PAUSADA", "FINALIZADA"),
         nullable=False
@@ -35,6 +35,8 @@ class SesionRutina(Base):
     duracion_min = Column(SmallInteger, nullable=True)
     esfuerzo_rpe = Column(Integer, nullable=False)
     comentario = Column(String(255), nullable=True)
+    nota_rendimiento = Column(DECIMAL(4,2), nullable=True)
+    conformidad = Column(Integer, nullable=True)
 
     assignment = relationship("AsignacionRutina", back_populates="sessions")
     routine_block = relationship("BloqueRutina", back_populates="sessions")

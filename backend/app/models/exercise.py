@@ -22,4 +22,24 @@ class Ejercicio(Base):
 
     routine_block_exercises = relationship("BloqueRutinaEjercicio", back_populates="exercise")
     completed_exercises = relationship("EjercicioRealizado", back_populates="exercise")
+    categories = relationship("EjercicioCategoria", back_populates="exercise")
+
+
+class Categoria(Base):
+    __tablename__ = "categoria"
+    
+    id_categoria = Column(Integer, primary_key=True, autoincrement=True)
+    nombre = Column(String(50), nullable=False, unique=True)
+
+    exercise_categories = relationship("EjercicioCategoria", back_populates="category")
+
+class EjercicioCategoria(Base):
+    __tablename__ = "ejercicioCategoria"
+
+    id_ejercicio = Column(Integer, ForeignKey("ejercicio.id_ejercicio"), primary_key=True)
+    id_categoria = Column(Integer, ForeignKey("categoria.id_categoria"), primary_key=True)
+
+    exercise = relationship("Ejercicio", back_populates="categories")
+    category = relationship("Categoria", back_populates="exercise_categories")
+
  

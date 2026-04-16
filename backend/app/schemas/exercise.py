@@ -3,6 +3,15 @@ from datetime import datetime
 from typing import Optional
 
 
+class CategoriaResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id_categoria: int
+    nombre: str
+
+class ExerciseCategoryCreate(BaseModel):
+    id_categoria: int
+
 class ExerciseCreate(BaseModel):
     nombre: str
     descripcion: str
@@ -11,7 +20,6 @@ class ExerciseCreate(BaseModel):
     video_url: Optional[str] = None
     fotos_url: Optional[str] = None
 
-
 class ExerciseUpdate(BaseModel):
     nombre: Optional[str] = None
     descripcion: Optional[str] = None
@@ -19,7 +27,6 @@ class ExerciseUpdate(BaseModel):
     equipamiento: Optional[str] = None
     video_url: Optional[str] = None
     fotos_url: Optional[str] = None
-
 
 class ExerciseResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -34,3 +41,4 @@ class ExerciseResponse(BaseModel):
     fotos_url: Optional[str] = None
     archivado: bool
     creado_en: datetime
+    categories: list[CategoriaResponse] = []
