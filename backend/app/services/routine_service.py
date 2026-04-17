@@ -196,32 +196,6 @@ def delete_block(db: Session, routine_id: int, block_id: int, trainer_id: int) -
     db.delete(block)
     db.commit()
 
-def reorder_blocks(db: Session, routine_id: int, data: ReorderRequest, trainer_id: int) -> list[BloqueRutina]:
-    get_routine_by_id(db, routine_id, trainer_id)
-
-    for block_id in data.ordered_ids:
-        block = db.query(BloqueRutina).filter(
-            BloqueRutina.id_bloque_rutina == block_id,
-            BloqueRutina.id_rutina == routine_id
-        ).first()
-        if not block:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Block {block_id} not found in this routine"
-            )
-        block.numero_dia = -block.numero_dia
-    db.flush()
-
-    for new_day, block_id in enumerate(data.ordered_ids, start=1):
-        block = db.query(BloqueRutina).filter(
-            BloqueRutina.id_bloque_rutina == block_id
-        ).first()
-        block.numero_dia = new_day
-
-    db.commit()
-    return get_blocks(db, routine_id, trainer_id)
-
-
 
 def get_block_exercises(db: Session, routine_id: int, block_id: int, trainer_id: int) -> list[BloqueRutinaEjercicio]:
     get_block_by_id(db, routine_id, block_id, trainer_id)

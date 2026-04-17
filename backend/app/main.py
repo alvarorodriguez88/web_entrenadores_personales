@@ -2,7 +2,7 @@ from fastapi import FastAPI
 import app.models
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import auth, users, exercises, routines, assignments, metrics
+from app.routers import auth, users, exercises, routines, assignments, metrics, analytics
 
  
 app = FastAPI(
@@ -33,3 +33,4 @@ app.include_router(exercises.router, prefix="/api/v1/exercises", tags=["Exercise
 app.include_router(routines.router, prefix="/api/v1/routines", tags=["Routines"])
 app.include_router(assignments.router, prefix="/api/v1/assignments", tags=["Assignments"])
 app.include_router(metrics.router, prefix="/api/v1/metrics", tags=["Metrics"])
+app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytics"])

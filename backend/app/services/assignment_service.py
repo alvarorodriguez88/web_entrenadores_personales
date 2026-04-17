@@ -184,6 +184,8 @@ def update_session(db: Session, assignment_id: int, session_id: int, data: Sessi
     if data.comentario is not None:
         session.comentario = data.comentario
 
+    session.nota_rendimiento = _calculate_session_performance(db, session)
+
     db.commit()
     db.refresh(session)
     return session
@@ -416,3 +418,56 @@ def delete_assignment_exercise(db: Session, assignment_id: int, customization_id
     )
     db.delete(customization)
     db.commit()
+
+def _calculate_session_performance(db: Session, session: SesionRutina) -> float:
+    logs = db.query(EjercicioRealizado).filter(
+        EjercicioRealizado.id_sesion == session.id_sesion_rutina
+    ).all()
+
+    if not logs:
+        return 0.0
+
+    exercise_scores = []
+
+    for log in logs:
+        customization = db.query(AsignacionEjercicio).join(
+            BloqueRutinaEjercicio,
+            AsignacionEjercicio.id_bloque_rutina_ej == BloqueRutinaEjercicio.id_bloque_rutina_ejercicio
+        ).filter(
+            AsignacionEjercicio.id_asignacion_rutina == session.id_asignacion,
+            BloqueRutinaEjercicio.id_ejercicio == log.id_ejercicio
+        ).first()
+
+        template = db.query(BloqueRutinaEjercicio).filter(
+            BloqueRutinaEjercicio.id_bloque_rutina == session.id_bloque_rutina,
+            BloqueRutinaEjercicio.id_ejercicio == log.id_ejercicio
+        ).first()
+
+        if not template:
+            continue
+
+        series_plan = customization.series_plan if customization and customization.series_plan else template.series_plan
+        reps_plan = customization.reps_plan if customization and customization.reps_plan else template.reps_plan
+        peso_plan = customization.peso_obj if customization and customization.peso_obj else template.peso_obj
+
+        scores = []
+
+        if series_plan and series_plan > 0:
+            scores.append(min(10.0, (log.series_real / series_plan) * 10))
+
+        if reps_plan and reps_plan > 0:
+            scores.append(min(10.0, (log.reps_real / reps_plan) * 10))
+
+        if peso_plan and peso_plan > 0 and log.peso_real is not None:
+            scores.append(min(10.0, (float(log.peso_real) / float(peso_plan)) * 10))
+
+        if not scores:
+            continue
+
+        exercise_score = max(1.0, sum(scores) / len(scores))
+        exercise_scores.append(exercise_score)
+
+    if not exercise_scores:
+        return 0.0
+
+    return round(sum(exercise_scores) / len(exercise_scores), 2)
