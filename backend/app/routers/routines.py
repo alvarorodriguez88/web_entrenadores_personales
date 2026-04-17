@@ -68,10 +68,6 @@ def update_block(routine_id: int, block_id: int, data: BlockUpdate, trainer: Ent
 def delete_block(routine_id: int, block_id: int, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
     routine_service.delete_block(db, routine_id, block_id, trainer.id_usuario)
 
-@router.patch("/{routine_id}/blocks/reorder", response_model=list[BlockResponse])
-def reorder_blocks(routine_id: int, data: ReorderRequest, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
-    return routine_service.reorder_blocks(db, routine_id, data, trainer.id_usuario)
-
 @router.get("/{routine_id}/blocks/{block_id}/exercises", response_model=list[BlockExerciseResponse])
 def get_block_exercises(routine_id: int, block_id: int, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
     return routine_service.get_block_exercises(db, routine_id, block_id, trainer.id_usuario)

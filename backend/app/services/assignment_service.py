@@ -10,6 +10,7 @@ from app.schemas.assignment import (
     ExerciseLogCreate, ExerciseLogUpdate,
     AssignmentExerciseCreate, AssignmentExerciseUpdate
 )
+from app.services.user_service import update_client_nivel_if_needed
 
 
 def get_assignments(db: Session, trainer_id: int) -> list[AsignacionRutina]:
@@ -56,7 +57,7 @@ def get_assignment_by_id(db: Session, assignment_id: int, trainer_id: int) -> As
     return assignment
 
 def create_assignment(db: Session, client_id: int, data: AssignmentCreate, trainer_id: int) -> AsignacionRutina:
-    _verify_client_belongs_to_trainer(db, client_id, trainer_id)
+    client = _verify_client_belongs_to_trainer(db, client_id, trainer_id)
 
     routine = db.query(Rutina).filter(
         Rutina.id_rutina == data.id_rutina,
@@ -78,6 +79,9 @@ def create_assignment(db: Session, client_id: int, data: AssignmentCreate, train
         notas=data.notas,
     )
     db.add(assignment)
+
+    update_client_nivel_if_needed(client, routine.nivel)
+
     db.commit()
     db.refresh(assignment)
     return assignment
@@ -158,6 +162,7 @@ def create_session(db: Session, assignment_id: int, data: SessionCreate, client_
         id_bloque_rutina=data.id_bloque_rutina,
         duracion_min=data.duracion_min,
         esfuerzo_rpe=data.esfuerzo_rpe,
+        conformidad=data.conformidad,
         comentario=data.comentario,
     )
     db.add(session)
@@ -172,8 +177,14 @@ def update_session(db: Session, assignment_id: int, session_id: int, data: Sessi
         session.duracion_min = data.duracion_min
     if data.esfuerzo_rpe is not None:
         session.esfuerzo_rpe = data.esfuerzo_rpe
+    if data.conformidad is not None:
+        session.conformidad = data.conformidad
+    if data.nota_rendimiento is not None:
+        session.nota_rendimiento = data.nota_rendimiento
     if data.comentario is not None:
         session.comentario = data.comentario
+
+    session.nota_rendimiento = _calculate_session_performance(db, session)
 
     db.commit()
     db.refresh(session)
@@ -407,3 +418,56 @@ def delete_assignment_exercise(db: Session, assignment_id: int, customization_id
     )
     db.delete(customization)
     db.commit()
+
+def _calculate_session_performance(db: Session, session: SesionRutina) -> float:
+    logs = db.query(EjercicioRealizado).filter(
+        EjercicioRealizado.id_sesion == session.id_sesion_rutina
+    ).all()
+
+    if not logs:
+        return 0.0
+
+    exercise_scores = []
+
+    for log in logs:
+        customization = db.query(AsignacionEjercicio).join(
+            BloqueRutinaEjercicio,
+            AsignacionEjercicio.id_bloque_rutina_ej == BloqueRutinaEjercicio.id_bloque_rutina_ejercicio
+        ).filter(
+            AsignacionEjercicio.id_asignacion_rutina == session.id_asignacion,
+            BloqueRutinaEjercicio.id_ejercicio == log.id_ejercicio
+        ).first()
+
+        template = db.query(BloqueRutinaEjercicio).filter(
+            BloqueRutinaEjercicio.id_bloque_rutina == session.id_bloque_rutina,
+            BloqueRutinaEjercicio.id_ejercicio == log.id_ejercicio
+        ).first()
+
+        if not template:
+            continue
+
+        series_plan = customization.series_plan if customization and customization.series_plan else template.series_plan
+        reps_plan = customization.reps_plan if customization and customization.reps_plan else template.reps_plan
+        peso_plan = customization.peso_obj if customization and customization.peso_obj else template.peso_obj
+
+        scores = []
+
+        if series_plan and series_plan > 0:
+            scores.append(min(10.0, (log.series_real / series_plan) * 10))
+
+        if reps_plan and reps_plan > 0:
+            scores.append(min(10.0, (log.reps_real / reps_plan) * 10))
+
+        if peso_plan and peso_plan > 0 and log.peso_real is not None:
+            scores.append(min(10.0, (float(log.peso_real) / float(peso_plan)) * 10))
+
+        if not scores:
+            continue
+
+        exercise_score = max(1.0, sum(scores) / len(scores))
+        exercise_scores.append(exercise_score)
+
+    if not exercise_scores:
+        return 0.0
+
+    return round(sum(exercise_scores) / len(exercise_scores), 2)

@@ -41,7 +41,11 @@ class Cliente(Base):
     fecha_alta = Column(DateTime, nullable=False, server_default=func.now())
     nivel = Column(
         Enum("PRINCIPIANTE", "INTERMEDIO", "AVANZADO"),
-        nullable=False
+        nullable=True
+    )
+    objetivo = Column(
+        Enum("PERDER_PESO", "GANAR_MASA", "MEJORA_RESISTENCIA", "MEJORAR_FUERZA", "MANTENIMIENTO"),
+        nullable=True
     )
 
     user = relationship("Usuario", back_populates="client")

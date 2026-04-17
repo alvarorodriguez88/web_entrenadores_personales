@@ -7,7 +7,7 @@ from decimal import Decimal
 class AssignmentCreate(BaseModel):
     id_rutina: int
     fecha_inicio: date
-    fecha_fin: Optional[date] = None
+    fecha_fin: date
     notas: Optional[str] = None
 
 class AssignmentStatusUpdate(BaseModel):
@@ -20,7 +20,7 @@ class AssignmentResponse(BaseModel):
     id_cliente: int
     id_rutina: int
     fecha_inicio: date
-    fecha_fin: Optional[date] = None
+    fecha_fin: date
     estado: str
     notas: Optional[str] = None
 
@@ -28,11 +28,14 @@ class SessionCreate(BaseModel):
     id_bloque_rutina: int
     duracion_min: Optional[int] = None
     esfuerzo_rpe: int
+    conformidad: Optional[int] = None
     comentario: Optional[str] = None
 
 class SessionUpdate(BaseModel):
     duracion_min: Optional[int] = None
     esfuerzo_rpe: Optional[int] = None
+    conformidad: Optional[int] = None
+    nota_rendimiento: Optional[Decimal] = None
     comentario: Optional[str] = None
 
 class SessionResponse(BaseModel):
@@ -44,6 +47,8 @@ class SessionResponse(BaseModel):
     fecha_hora: datetime
     duracion_min: Optional[int] = None
     esfuerzo_rpe: int
+    conformidad: Optional[int] = None
+    nota_rendimiento: Optional[Decimal] = None
     comentario: Optional[str] = None
 
 class ExerciseLogCreate(BaseModel):

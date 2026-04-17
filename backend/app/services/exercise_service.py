@@ -1,18 +1,23 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException, status
 
-from app.models.exercise import Ejercicio
-from app.schemas.exercise import ExerciseCreate, ExerciseUpdate
+from app.models.exercise import Ejercicio, Categoria, EjercicioCategoria
+from app.schemas.exercise import ExerciseCreate, ExerciseUpdate, ExerciseCategoryCreate
 
 
 def get_exercises(db: Session, trainer_id: int) -> list[Ejercicio]:
-    return db.query(Ejercicio).filter(
+    return db.query(Ejercicio).options(
+        joinedload(Ejercicio.categories).joinedload(EjercicioCategoria.category)
+    ).filter(
         Ejercicio.id_entrenador == trainer_id
     ).all()
 
 def get_exercise_by_id(db: Session, exercise_id: int, trainer_id: int) -> Ejercicio:
-    exercise = db.query(Ejercicio).filter(
-        Ejercicio.id_ejercicio == exercise_id
+    exercise = db.query(Ejercicio).options(
+        joinedload(Ejercicio.categories).joinedload(EjercicioCategoria.category)
+    ).filter(
+        Ejercicio.id_ejercicio == exercise_id,
+        Ejercicio.id_entrenador == trainer_id
     ).first()
 
     if not exercise:
@@ -111,3 +116,56 @@ def unarchive_exercise(db: Session, exercise_id: int, trainer_id: int) -> Ejerci
     db.commit()
     db.refresh(exercise)
     return exercise
+
+def get_categories(db: Session) -> list[Categoria]:
+    return db.query(Categoria).all()
+
+def add_exercise_category(db: Session, exercise_id: int, data: ExerciseCategoryCreate, trainer_id: int) -> Ejercicio:
+    get_exercise_by_id(db, exercise_id, trainer_id)
+
+    category = db.query(Categoria).filter(
+        Categoria.id_categoria == data.id_categoria
+    ).first()
+
+    if not category:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Category not found"
+        )
+
+    existing = db.query(EjercicioCategoria).filter(
+        EjercicioCategoria.id_ejercicio == exercise_id,
+        EjercicioCategoria.id_categoria == data.id_categoria
+    ).first()
+
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Exercise already has this category"
+        )
+
+    exercise_category = EjercicioCategoria(
+        id_ejercicio=exercise_id,
+        id_categoria=data.id_categoria
+    )
+    db.add(exercise_category)
+    db.commit()
+    return get_exercise_by_id(db, exercise_id, trainer_id)
+
+def remove_exercise_category(db: Session, exercise_id: int, category_id: int, trainer_id: int) -> Ejercicio:
+    get_exercise_by_id(db, exercise_id, trainer_id)
+
+    exercise_category = db.query(EjercicioCategoria).filter(
+        EjercicioCategoria.id_ejercicio == exercise_id,
+        EjercicioCategoria.id_categoria == category_id
+    ).first()
+
+    if not exercise_category:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Category not found on this exercise"
+        )
+
+    db.delete(exercise_category)
+    db.commit()
+    return get_exercise_by_id(db, exercise_id, trainer_id)
