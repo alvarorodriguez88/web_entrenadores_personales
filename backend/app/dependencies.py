@@ -14,7 +14,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     payload = verify_token(token)
 
     user = db.query(Usuario).filter(
-        Usuario.id_usuario == payload.sub
+        Usuario.id_usuario == int(payload.sub)
     ).first()
 
     if not user:

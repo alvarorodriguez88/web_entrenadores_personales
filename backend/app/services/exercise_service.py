@@ -7,14 +7,14 @@ from app.schemas.exercise import ExerciseCreate, ExerciseUpdate, ExerciseCategor
 
 def get_exercises(db: Session, trainer_id: int) -> list[Ejercicio]:
     return db.query(Ejercicio).options(
-        joinedload(Ejercicio.categories).joinedload(EjercicioCategoria.category)
+        joinedload(Ejercicio.categories)
     ).filter(
         Ejercicio.id_entrenador == trainer_id
     ).all()
 
 def get_exercise_by_id(db: Session, exercise_id: int, trainer_id: int) -> Ejercicio:
     exercise = db.query(Ejercicio).options(
-        joinedload(Ejercicio.categories).joinedload(EjercicioCategoria.category)
+        joinedload(Ejercicio.categories)
     ).filter(
         Ejercicio.id_ejercicio == exercise_id,
         Ejercicio.id_entrenador == trainer_id
