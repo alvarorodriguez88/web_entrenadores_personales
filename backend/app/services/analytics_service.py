@@ -267,7 +267,7 @@ def get_trainer_recent_activity(db: Session, trainer_id: int) -> list[dict]:
         AsignacionRutina.id_cliente.in_(client_ids)
     ).order_by(
         SesionRutina.fecha_hora.desc()
-    ).limit(10).all()
+    ).limit(5).all()
 
     result = []
     for session, block, client in sessions:
@@ -283,13 +283,16 @@ def get_trainer_recent_activity(db: Session, trainer_id: int) -> list[dict]:
 
 def get_trainer_performance_distribution(db: Session, trainer_id: int) -> dict:
     clients = get_trainer_clients(db, trainer_id)
+    print(f"Total clientes encontrados: {len(clients)} → ids: {[c.id_usuario for c in clients]}")
     today = date.today()
-    one_week_ago = today - timedelta(weeks=1)
+    one_week_ago = today - timedelta(weeks=2)
 
     alto = medio = bajo = inactivo = 0
 
     for client in clients:
+        print(f"Buscando sesiones para id_usuario={client.id_usuario}, rango={one_week_ago} → {today}")
         avg = _get_client_rendimiento(db, client.id_usuario, one_week_ago, today)
+        print(f"  avg={avg}")
         if avg == 0:
             inactivo += 1
         elif avg >= 8:
