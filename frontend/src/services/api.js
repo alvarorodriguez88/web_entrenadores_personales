@@ -295,6 +295,55 @@ export const assignmentsApi = {
 }
 
 
+export const analyticsApi = {
+
+  getTrainerKpis(periodo = 'semanal') {
+    return request(`/analytics/trainer/kpis?periodo=${periodo}`)
+  },
+
+  getTrainerAlerts() {
+    return request('/analytics/trainer/alerts')
+  },
+
+  getTrainerRecentActivity() {
+    return request('/analytics/trainer/recent-activity')
+  },
+
+  getTrainerPerformanceDistribution() {
+    return request('/analytics/trainer/performance-distribution')
+  },
+
+  getTrainerClientsTable(periodo = 'semanal') {
+    return request(`/analytics/trainer/clients/table?periodo=${periodo}`)
+  },
+
+  getTrainerClientEvolution(clientId, periodo = 'semanal') {
+    return request(`/analytics/trainer/clients/${clientId}/evolution?periodo=${periodo}`)
+  },
+
+  
+  getClientKpis(periodo = 'semanal') {
+    return request(`/analytics/client/kpis?periodo=${periodo}`)
+  },
+
+  getClientWeeklyCalendar() {
+    return request('/analytics/client/weekly-calendar')
+  },
+
+  getClientTodayWorkout() {
+    return request('/analytics/client/today-workout')
+  },
+
+  getClientEvolution(periodo = 'semanal') {
+    return request(`/analytics/client/evolution?periodo=${periodo}`)
+  },
+
+  getClientExerciseDistribution() {
+    return request('/analytics/client/exercise-distribution')
+  },
+}
+
+
 export const metricsApi = {
   getClientMetrics(clientId) {
     return request(`/metrics/clients/${clientId}`)

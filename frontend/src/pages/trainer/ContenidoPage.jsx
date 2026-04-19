@@ -15,17 +15,14 @@ const NIVEL_OPTIONS = [
   { value: 'AVANZADO',     label: 'Avanzado'     },
 ]
 
-const DIFICULTAD_OPTIONS = NIVEL_OPTIONS
-
-
 const columnasEjercicios = [
   { key: 'nombre',         label: 'Ejercicio'      },
   { key: 'grupo_muscular', label: 'Grupo muscular' },
-  { key: 'dificultad',     label: 'Dificultad'     },
   { key: 'equipamiento',   label: 'Equipamiento'   },
+  { key: 'archivado',      label: 'Estado',        render: (v) => v ? 'Archivado' : 'Activo' },
 ]
 
-const emptyEjForm = { nombre: '', descripcion: '', dificultad: '', grupo_muscular: '', equipamiento: '', video_url: '' }
+const emptyEjForm = { nombre: '', descripcion: '', grupo_muscular: '', equipamiento: '', video_url: '' }
 
 
 function TabEjercicios() {
@@ -35,7 +32,6 @@ function TabEjercicios() {
 
   const [busqueda,    setBusqueda]    = useState('')
   const [filtroGrupo, setFiltroGrupo] = useState('')
-  const [filtroDif,   setFiltroDif]   = useState('')
   const [filtroEquip, setFiltroEquip] = useState('')
   const [modalAbierto, setModalAbierto] = useState(false)
   const [form,  setForm]  = useState(emptyEjForm)
@@ -60,7 +56,6 @@ function TabEjercicios() {
   const filtrados = ejercicios.filter((e) =>
     e.nombre.toLowerCase().includes(busqueda.toLowerCase()) &&
     (!filtroGrupo || (e.grupo_muscular ?? '').toLowerCase().includes(filtroGrupo.toLowerCase())) &&
-    (!filtroDif   || e.dificultad === filtroDif) &&
     (!filtroEquip || (e.equipamiento ?? '').toLowerCase().includes(filtroEquip.toLowerCase()))
   )
 
@@ -73,11 +68,10 @@ function TabEjercicios() {
     try {
       await exercisesApi.createExercise({
         nombre:         form.nombre,
-        descripcion:    form.descripcion    || null,
-        dificultad:     form.dificultad     || null,
+        descripcion:    form.descripcion    || '',
         grupo_muscular: form.grupo_muscular || null,
         equipamiento:   form.equipamiento   || null,
-        video_url:      form.video_url       || null,
+        video_url:      form.video_url      || null,
       })
       cerrar()
       cargarEjercicios()
@@ -89,16 +83,13 @@ function TabEjercicios() {
     <>
       <div className="flex flex-wrap gap-3 items-end">
         <div className="flex-1 min-w-36">
-          <Input placeholder="Nombre ejercicio"  value={busqueda}    onChange={(e) => setBusqueda(e.target.value)} />
+          <Input placeholder="Nombre ejercicio" value={busqueda}    onChange={(e) => setBusqueda(e.target.value)} />
         </div>
         <div className="w-40">
-          <Input placeholder="Grupo muscular"    value={filtroGrupo} onChange={(e) => setFiltroGrupo(e.target.value)} />
-        </div>
-        <div className="w-44">
-          <Input type="select" placeholder="Dificultad" value={filtroDif} onChange={(e) => setFiltroDif(e.target.value)} options={DIFICULTAD_OPTIONS} />
+          <Input placeholder="Grupo muscular"   value={filtroGrupo} onChange={(e) => setFiltroGrupo(e.target.value)} />
         </div>
         <div className="w-40">
-          <Input placeholder="Equipamiento" value={filtroEquip} onChange={(e) => setFiltroEquip(e.target.value)} />
+          <Input placeholder="Equipamiento"     value={filtroEquip} onChange={(e) => setFiltroEquip(e.target.value)} />
         </div>
         <Button onClick={() => setModalAbierto(true)}>Crear ejercicio</Button>
       </div>
@@ -123,7 +114,6 @@ function TabEjercicios() {
             <div className="flex flex-col gap-3">
               <Input placeholder="Nombre del ejercicio" value={form.nombre} onChange={(e) => setField('nombre', e.target.value)} error={error && !form.nombre.trim() ? error : ''} />
               <div className="flex gap-3">
-                <Input type="select" placeholder="Dificultad" value={form.dificultad} onChange={(e) => setField('dificultad', e.target.value)} options={DIFICULTAD_OPTIONS} />
                 <Input placeholder="Grupo muscular" value={form.grupo_muscular} onChange={(e) => setField('grupo_muscular', e.target.value)} />
                 <Input placeholder="Equipamiento"   value={form.equipamiento}   onChange={(e) => setField('equipamiento',   e.target.value)} />
               </div>
