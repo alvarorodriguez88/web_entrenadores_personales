@@ -100,6 +100,16 @@ def update_assignment_status(db: Session, assignment_id: int, data: AssignmentSt
     db.refresh(assignment)
     return assignment
 
+def update_assignment(db: Session, assignment_id: int, data, trainer_id: int) -> AsignacionRutina:
+    assignment = get_assignment_by_id(db, assignment_id, trainer_id)
+    if data.fecha_fin is not None:
+        assignment.fecha_fin = data.fecha_fin
+    if data.notas is not None:
+        assignment.notas = data.notas
+    db.commit()
+    db.refresh(assignment)
+    return assignment
+
 def delete_assignment(db: Session, assignment_id: int, trainer_id: int) -> None:
     assignment = get_assignment_by_id(db, assignment_id, trainer_id)
     db.delete(assignment)

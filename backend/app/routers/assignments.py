@@ -5,9 +5,9 @@ from app.database import get_db
 from app.dependencies import get_current_trainer, get_current_client
 from app.models.user import Entrenador, Cliente
 from app.schemas.assignment import (
-    AssignmentCreate, AssignmentStatusUpdate, AssignmentResponse,
+    AssignmentCreate, AssignmentStatusUpdate, AssignmentUpdate, AssignmentResponse,
     SessionCreate, SessionUpdate, SessionResponse,
-    ExerciseLogCreate, ExerciseLogUpdate, ExerciseLogResponse, 
+    ExerciseLogCreate, ExerciseLogUpdate, ExerciseLogResponse,
     AssignmentExerciseCreate, AssignmentExerciseUpdate, AssignmentExerciseResponse
 )
 from app.services import assignment_service
@@ -27,6 +27,10 @@ def get_assignment_history(trainer: Entrenador = Depends(get_current_trainer), d
 @router.patch("/{assignment_id}/status", response_model=AssignmentResponse)
 def update_assignment_status(assignment_id: int, data: AssignmentStatusUpdate, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
     return assignment_service.update_assignment_status(db, assignment_id, data, trainer.id_usuario)
+
+@router.put("/{assignment_id}", response_model=AssignmentResponse)
+def update_assignment(assignment_id: int, data: AssignmentUpdate, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
+    return assignment_service.update_assignment(db, assignment_id, data, trainer.id_usuario)
 
 @router.delete("/{assignment_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_assignment(assignment_id: int, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
