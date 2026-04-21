@@ -29,6 +29,29 @@ def _get_period_range(periodo: str) -> tuple[date, date, date, date]:
 
     return start_current, end_current, start_previous, end_previous
 
+def _get_period_ranges(periodo: str) -> list[tuple[date, date]]:
+    today = date.today()
+    ranges = []
+
+    if periodo == "semanal":
+        for i in range(7, -1, -1):
+            week_start = today - timedelta(weeks=i) - timedelta(days=today.weekday())
+            week_end = week_start + timedelta(days=6)
+            ranges.append((week_start, week_end))
+    else:
+        for i in range(5, -1, -1):
+            month_date = today.replace(day=1)
+            for _ in range(i):
+                month_date = (month_date - timedelta(days=1)).replace(day=1)
+            month_start = month_date
+            if month_date.month == 12:
+                month_end = month_date.replace(day=31)
+            else:
+                month_end = month_date.replace(month=month_date.month + 1, day=1) - timedelta(days=1)
+            ranges.append((month_start, month_end))
+
+    return ranges
+
 def _get_expected_sessions_in_period(db: Session, assignment: AsignacionRutina, start: date, end: date) -> int:
     num_blocks = db.query(func.count(BloqueRutina.id_bloque_rutina)).filter(
         BloqueRutina.id_rutina == assignment.id_rutina
@@ -267,7 +290,7 @@ def get_trainer_recent_activity(db: Session, trainer_id: int) -> list[dict]:
         AsignacionRutina.id_cliente.in_(client_ids)
     ).order_by(
         SesionRutina.fecha_hora.desc()
-    ).limit(10).all()
+    ).limit(5).all()
 
     result = []
     for session, block, client in sessions:
@@ -283,13 +306,16 @@ def get_trainer_recent_activity(db: Session, trainer_id: int) -> list[dict]:
 
 def get_trainer_performance_distribution(db: Session, trainer_id: int) -> dict:
     clients = get_trainer_clients(db, trainer_id)
+    print(f"Total clientes encontrados: {len(clients)} → ids: {[c.id_usuario for c in clients]}")
     today = date.today()
-    one_week_ago = today - timedelta(weeks=1)
+    one_week_ago = today - timedelta(weeks=2)
 
     alto = medio = bajo = inactivo = 0
 
     for client in clients:
+        print(f"Buscando sesiones para id_usuario={client.id_usuario}, rango={one_week_ago} → {today}")
         avg = _get_client_rendimiento(db, client.id_usuario, one_week_ago, today)
+        print(f"  avg={avg}")
         if avg == 0:
             inactivo += 1
         elif avg >= 8:
@@ -475,35 +501,35 @@ def get_client_exercise_distribution(db: Session, client_id: int) -> list[dict]:
         for r in rows
     ]
 
-def _get_evolution_points(db: Session, client_id: int, periodo: str) -> list[dict]:
-    today = date.today()
+def get_trainer_evolution(db: Session, trainer_id: int, periodo: str) -> list[dict]:
+    clients = get_trainer_clients(db, trainer_id)
+    if not clients:
+        return []
+
+    client_ids = [c.id_usuario for c in clients]
     points = []
 
-    if periodo == "semanal":
-        for i in range(7, -1, -1):
-            week_start = today - timedelta(weeks=i) - timedelta(days=today.weekday())
-            week_end = week_start + timedelta(days=6)
-            points.append({
-                "fecha": str(week_start),
-                "rendimiento": _get_client_rendimiento(db, client_id, week_start, week_end),
-                "cumplimiento": _get_client_cumplimiento(db, client_id, week_start, week_end),
-                "conformidad": _get_client_conformidad(db, client_id, week_start, week_end),
-            })
-    else:
-        for i in range(5, -1, -1):
-            month_date = today.replace(day=1)
-            for _ in range(i):
-                month_date = (month_date - timedelta(days=1)).replace(day=1)
-            month_start = month_date
-            if month_date.month == 12:
-                month_end = month_date.replace(day=31)
-            else:
-                month_end = month_date.replace(month=month_date.month + 1, day=1) - timedelta(days=1)
-            points.append({
-                "fecha": str(month_start),
-                "rendimiento": _get_client_rendimiento(db, client_id, month_start, month_end),
-                "cumplimiento": _get_client_cumplimiento(db, client_id, month_start, month_end),
-                "conformidad": _get_client_conformidad(db, client_id, month_start, month_end),
-            })
+    for start, end in _get_period_ranges(periodo):
+        rendimientos = [_get_client_rendimiento(db, cid, start, end) for cid in client_ids]
+        cumplimientos = [_get_client_cumplimiento(db, cid, start, end) for cid in client_ids]
+        conformidades = [_get_client_conformidad(db, cid, start, end) for cid in client_ids]
 
+        points.append({
+            "fecha": str(start),
+            "rendimiento": round(sum(rendimientos) / len(rendimientos), 2),
+            "cumplimiento": round(sum(cumplimientos) / len(cumplimientos), 2),
+            "conformidad": round(sum(conformidades) / len(conformidades), 2),
+        })
+
+    return points
+
+def _get_evolution_points(db: Session, client_id: int, periodo: str) -> list[dict]:
+    points = []
+    for start, end in _get_period_ranges(periodo):
+        points.append({
+            "fecha": str(start),
+            "rendimiento": _get_client_rendimiento(db, client_id, start, end),
+            "cumplimiento": _get_client_cumplimiento(db, client_id, start, end),
+            "conformidad": _get_client_conformidad(db, client_id, start, end),
+        })
     return points

@@ -22,7 +22,7 @@ class Ejercicio(Base):
 
     routine_block_exercises = relationship("BloqueRutinaEjercicio", back_populates="exercise")
     completed_exercises = relationship("EjercicioRealizado", back_populates="exercise")
-    categories = relationship("EjercicioCategoria", back_populates="exercise")
+    categories = relationship("Categoria", secondary="ejercicioCategoria", viewonly=True)
 
 
 class Categoria(Base):
@@ -39,7 +39,7 @@ class EjercicioCategoria(Base):
     id_ejercicio = Column(Integer, ForeignKey("ejercicio.id_ejercicio"), primary_key=True)
     id_categoria = Column(Integer, ForeignKey("categoria.id_categoria"), primary_key=True)
 
-    exercise = relationship("Ejercicio", back_populates="categories")
+    exercise = relationship("Ejercicio")
     category = relationship("Categoria", back_populates="exercise_categories")
 
  

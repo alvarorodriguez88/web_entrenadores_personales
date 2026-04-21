@@ -221,6 +221,10 @@ export const assignmentsApi = {
     return request(`/assignments/${id}/status`, { method: 'PATCH', body: { estado: status } })
   },
 
+  updateAssignment(id, data) {
+    return request(`/assignments/${id}`, { method: 'PUT', body: data })
+  },
+
   getClientAssignments(clientId) {
     return request(`/assignments/clients/${clientId}`)
   },
@@ -291,6 +295,59 @@ export const assignmentsApi = {
 
   deleteMyExerciseLog(logId) {
     return request(`/assignments/me/logs/${logId}`, { method: 'DELETE' })
+  },
+}
+
+
+export const analyticsApi = {
+
+  getTrainerKpis(periodo = 'semanal') {
+    return request(`/analytics/trainer/kpis?periodo=${periodo}`)
+  },
+
+  getTrainerAlerts() {
+    return request('/analytics/trainer/alerts')
+  },
+
+  getTrainerRecentActivity() {
+    return request('/analytics/trainer/recent-activity')
+  },
+
+  getTrainerPerformanceDistribution() {
+    return request('/analytics/trainer/performance-distribution')
+  },
+
+  getTrainerClientsTable(periodo = 'semanal') {
+    return request(`/analytics/trainer/clients/table?periodo=${periodo}`)
+  },
+
+  getTrainerEvolution(periodo = 'semanal') {
+    return request(`/analytics/trainer/evolution?periodo=${periodo}`)
+  },
+
+  getTrainerClientEvolution(clientId, periodo = 'semanal') {
+    return request(`/analytics/trainer/clients/${clientId}/evolution?periodo=${periodo}`)
+  },
+
+  
+  getClientKpis(periodo = 'semanal') {
+    return request(`/analytics/client/kpis?periodo=${periodo}`)
+  },
+
+  getClientWeeklyCalendar() {
+    return request('/analytics/client/weekly-calendar')
+  },
+
+  getClientTodayWorkout() {
+    return request('/analytics/client/today-workout')
+  },
+
+  getClientEvolution(periodo = 'semanal') {
+    return request(`/analytics/client/evolution?periodo=${periodo}`)
+  },
+
+  getClientExerciseDistribution() {
+    return request('/analytics/client/exercise-distribution')
   },
 }
 

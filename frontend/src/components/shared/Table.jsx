@@ -35,7 +35,7 @@ function Table({ columns, data, emptyMessage = 'No hay datos disponibles', onRow
               >
                 {columns.map((col) => (
                   <td key={col.key} className="px-4 py-3 text-gray-700">
-                    {row[col.key] ?? '—'}
+                    {col.render ? col.render(row[col.key], row) : (row[col.key] ?? '—')}
                   </td>
                 ))}
               </tr>

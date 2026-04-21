@@ -13,6 +13,10 @@ class AssignmentCreate(BaseModel):
 class AssignmentStatusUpdate(BaseModel):
     estado: str
 
+class AssignmentUpdate(BaseModel):
+    fecha_fin: Optional[date] = None
+    notas: Optional[str] = None
+
 class AssignmentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

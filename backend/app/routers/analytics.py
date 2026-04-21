@@ -37,6 +37,11 @@ def get_trainer_performance_distribution(trainer: Entrenador = Depends(get_curre
 def get_trainer_clients_table(periodo: Literal["semanal", "mensual"] = "semanal", trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
     return analytics_service.get_trainer_clients_table(db, trainer.id_usuario, periodo)
 
+@router.get("/trainer/evolution", response_model=EvolutionResponse)
+def get_trainer_evolution(periodo: Literal["semanal", "mensual"] = "semanal", trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
+    points = analytics_service.get_trainer_evolution(db, trainer.id_usuario, periodo)
+    return {"puntos": points}
+
 @router.get("/trainer/clients/{client_id}/evolution", response_model=EvolutionResponse)
 def get_trainer_client_evolution(client_id: int, periodo: Literal["semanal", "mensual"] = "semanal", trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
     points = analytics_service.get_trainer_client_evolution(db, trainer.id_usuario, client_id, periodo)

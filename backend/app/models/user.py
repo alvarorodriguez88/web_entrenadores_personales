@@ -44,7 +44,7 @@ class Cliente(Base):
         nullable=True
     )
     objetivo = Column(
-        Enum("PERDER_PESO", "GANAR_MASA", "MEJORA_RESISTENCIA", "MEJORAR_FUERZA", "MANTENIMIENTO"),
+        Enum("PERDER_PESO", "GANAR_MASA", "MEJORAR_RESISTENCIA", "MEJORAR_FUERZA", "MANTENIMIENTO"),
         nullable=True
     )
 
