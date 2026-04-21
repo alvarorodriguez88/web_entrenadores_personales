@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, Legend,
+  PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import { analyticsApi } from '../../services/api'
 import Card from '../../components/shared/Card'
 import Table from '../../components/shared/Table'
 import Button from '../../components/shared/Button'
+import EvolucionChart from '../../components/shared/EvolucionChart'
 import { formatDateTime } from '../../utils/date'
 
 const DONUT_COLORS = ['#1D7FD8', '#60a5fa', '#fbbf24', '#f87171']
@@ -40,7 +40,7 @@ function toArray(val, ...keys) {
 
 function DashboardPage() {
   const [periodo,       setPeriodo]       = useState('semanal')
-  const [cumplimiento,  setCumplimiento]  = useState([])
+  const [evolution,     setEvolution]     = useState([])
   const [distribucion,  setDistribucion]  = useState([])
   const [alertas,       setAlertas]       = useState([])
   const [tablaClientes, setTablaClientes] = useState([])
@@ -52,15 +52,14 @@ function DashboardPage() {
       setLoading(true)
       setError('')
       try {
-        const [kpisData, distData, alertasData, tablaData] = await Promise.all([
-          analyticsApi.getTrainerKpis(periodo),
+        const [evolutionData, distData, alertasData, tablaData] = await Promise.all([
+          analyticsApi.getTrainerEvolution(periodo),
           analyticsApi.getTrainerPerformanceDistribution(),
           analyticsApi.getTrainerAlerts(),
           analyticsApi.getTrainerClientsTable(periodo),
         ])
 
-        // El backend devuelve la serie histórica dentro de los KPIs
-        setCumplimiento(toArray(kpisData, 'serie_cumplimiento', 'historico', 'serie'))
+        setEvolution(toArray(evolutionData, 'puntos'))
         setDistribucion([
           { name: 'Alto rendimiento', value: distData.alto,     color: DONUT_COLORS[0] },
           { name: 'Medio',            value: distData.medio,    color: DONUT_COLORS[1] },
@@ -113,31 +112,11 @@ function DashboardPage() {
                GET /analytics/trainer/evolution — actualmente no existe el endpoint */}
 
       {/* Gráfico de líneas — Cumplimiento */}
-      <Card title="Cumplimiento de rutina y conformidad">
-        {cumplimiento.length === 0 ? (
+      <Card title="Evolución del cumplimiento, conformidad y rendimiento">
+        {evolution.length === 0 ? (
           <p className="text-sm text-gray-400 py-8 text-center">Sin datos de cumplimiento</p>
         ) : (
-          <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={cumplimiento} margin={{ top: 4, right: 16, left: -16, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="etiqueta" tick={{ fontSize: 12, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 12, fill: '#9ca3af' }} axisLine={false} tickLine={false} domain={[0, 100]} unit="%" />
-                <Tooltip
-                  formatter={(v) => [`${v}%`, 'Cumplimiento']}
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="porcentaje"
-                  stroke="#1D7FD8"
-                  strokeWidth={2.5}
-                  dot={{ r: 4, fill: '#1D7FD8', strokeWidth: 0 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+          <EvolucionChart data={evolution} />
         )}
       </Card>
 

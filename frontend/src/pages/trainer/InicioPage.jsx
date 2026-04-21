@@ -4,6 +4,7 @@ import { analyticsApi } from '../../services/api'
 import KPICard from '../../components/shared/KPICard'
 import Card from '../../components/shared/Card'
 import Button from '../../components/shared/Button'
+import { formatDateTime } from '../../utils/date'
 
 const today = new Date().toLocaleDateString('es-ES', {
   day: 'numeric',
@@ -160,13 +161,13 @@ function InicioPage() {
                       {a.nombre} {a.apellidos}
                     </span>
                     <span className="text-xs text-gray-400">
-                      {new Date(a.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                      {formatDateTime(a.fecha_hora)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">{a.nombre_bloque}</span>
                     {a.nota_rendimiento != null && (
-                      <span className="text-xs text-[#1D7FD8] font-medium">RPE {a.nota_rendimiento}</span>
+                      <span className="text-xs text-[#1D7FD8] font-medium">Rendimiento - {a.nota_rendimiento}</span>
                     )}
                   </div>
                 </li>

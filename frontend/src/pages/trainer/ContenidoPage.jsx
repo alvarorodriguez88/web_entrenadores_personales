@@ -137,7 +137,8 @@ function TabEjercicios() {
 
 
 const emptyRutinaForm = { nombre: '', objetivo: '', nivel: '', descripcion: '' }
-const newBloque = () => ({ dia: 1, ejercicios: [''] })
+const newEj     = () => ({ id_ejercicio: '', series_plan: 3, reps_plan: 10, peso_obj: '' })
+const newBloque = () => ({ dia: 1, ejercicios: [newEj()] })
 
 function RutinaCard({ rutina, onAsignar }) {
   return (
@@ -163,6 +164,8 @@ function TabRutinas() {
   const [clientes,        setClientes]        = useState([])
   const [loadingClientes, setLoadingClientes] = useState(false)
 
+  const [ejerciciosDisp, setEjerciciosDisp] = useState([])
+
   const [busqueda,    setBusqueda]    = useState('')
   const [filtroObj,   setFiltroObj]   = useState('')
 
@@ -176,6 +179,9 @@ function TabRutinas() {
   const [rutinaAsignar,   setRutinaAsignar]   = useState(null)
   const [clienteId,       setClienteId]       = useState('')
   const [fechaInicio,     setFechaInicio]     = useState('')
+  const [fechaFin,        setFechaFin]        = useState('')
+  const [bloquesAsignar,  setBloquesAsignar]  = useState([])
+  const [loadingBloques,  setLoadingBloques]  = useState(false)
   const [errorA,          setErrorA]          = useState('')
   const [savingA,         setSavingA]         = useState(false)
 
@@ -206,10 +212,13 @@ function TabRutinas() {
   useEffect(() => {
     cargarRutinas()
     cargarClientes()
+    exercisesApi.getExercises()
+      .then((data) => setEjerciciosDisp(data.filter((e) => !e.archivado)))
+      .catch(() => {})
   }, [])
 
   const clienteOptions = clientes.map((c) => ({
-    value: String(c.id_usuario),
+    value: String(c.user.id_usuario),
     label: `${c.user.nombre} ${c.user.apellidos}`,
   }))
 
@@ -218,16 +227,20 @@ function TabRutinas() {
     (!filtroObj || (r.objetivo ?? '').toLowerCase().includes(filtroObj.toLowerCase()))
   )
 
+  const ejercicioOptions = ejerciciosDisp.map((e) => ({ value: String(e.id_ejercicio), label: e.nombre }))
+
   function setFieldR(k, v) { setFormR((p) => ({ ...p, [k]: v })) }
 
   function addBloque() {
-    setBloques((prev) => [...prev, { dia: prev.length + 1, ejercicios: [''] }])
+    setBloques((prev) => [...prev, { dia: prev.length + 1, ejercicios: [newEj()] }])
   }
   function addEjercicio(bi) {
-    setBloques((prev) => prev.map((b, i) => i === bi ? { ...b, ejercicios: [...b.ejercicios, ''] } : b))
+    setBloques((prev) => prev.map((b, i) => i === bi ? { ...b, ejercicios: [...b.ejercicios, newEj()] } : b))
   }
-  function updateEjercicio(bi, ei, val) {
-    setBloques((prev) => prev.map((b, i) => i === bi ? { ...b, ejercicios: b.ejercicios.map((e, j) => j === ei ? val : e) } : b))
+  function updateEjercicio(bi, ei, campo, valor) {
+    setBloques((prev) => prev.map((b, i) =>
+      i === bi ? { ...b, ejercicios: b.ejercicios.map((e, j) => j === ei ? { ...e, [campo]: valor } : e) } : b
+    ))
   }
   function removeEjercicio(bi, ei) {
     setBloques((prev) => prev.map((b, i) => i === bi ? { ...b, ejercicios: b.ejercicios.filter((_, j) => j !== ei) } : b))
@@ -246,9 +259,19 @@ function TabRutinas() {
         descripcion: formR.descripcion || null,
       })
 
-      // TODO: cuando los bloques tengan ejercicios reales, añadir createBlockExercise
       for (let i = 0; i < bloques.length; i++) {
-        await routinesApi.createBlock(rutina.id_rutina, { dia_semana: bloques[i].dia, orden: i + 1 })
+        const block = await routinesApi.createBlock(rutina.id_rutina, { numero_dia: bloques[i].dia })
+        for (let j = 0; j < bloques[i].ejercicios.length; j++) {
+          const ej = bloques[i].ejercicios[j]
+          if (!ej.id_ejercicio) continue
+          await routinesApi.createBlockExercise(rutina.id_rutina, block.id_bloque_rutina, {
+            id_ejercicio: Number(ej.id_ejercicio),
+            orden:        j + 1,
+            series_plan:  Number(ej.series_plan) || 1,
+            reps_plan:    Number(ej.reps_plan)   || 1,
+            peso_obj:     ej.peso_obj !== '' ? Number(ej.peso_obj) : null,
+          })
+        }
       }
       cerrarCrear()
       cargarRutinas()
@@ -256,17 +279,69 @@ function TabRutinas() {
     finally { setSavingR(false) }
   }
 
-  function abrirAsignar(rutina) { setRutinaAsignar(rutina); setClienteId(''); setFechaInicio(''); setErrorA(''); setModalAsignar(true) }
-  function cerrarAsignar() { setModalAsignar(false); setRutinaAsignar(null) }
+  async function abrirAsignar(rutina) {
+    setRutinaAsignar(rutina)
+    setClienteId('')
+    setFechaInicio('')
+    setFechaFin('')
+    setErrorA('')
+    setBloquesAsignar([])
+    setModalAsignar(true)
+    setLoadingBloques(true)
+    try {
+      const bloques = await routinesApi.getBlocks(rutina.id_rutina)
+      const bloquesConEj = await Promise.all(
+        bloques.map(async (b) => {
+          const ejercicios = await routinesApi.getBlockExercises(rutina.id_rutina, b.id_bloque_rutina)
+          return {
+            ...b,
+            ejercicios: ejercicios.map((ej) => ({
+              ...ej,
+              override_series: '',
+              override_reps:   '',
+              override_peso:   '',
+            })),
+          }
+        })
+      )
+      setBloquesAsignar(bloquesConEj)
+    } catch {
+    } finally {
+      setLoadingBloques(false)
+    }
+  }
+
+  function cerrarAsignar() { setModalAsignar(false); setRutinaAsignar(null); setBloquesAsignar([]) }
+
+  function updateOverride(bi, ei, campo, valor) {
+    setBloquesAsignar((prev) => prev.map((b, i) =>
+      i === bi ? { ...b, ejercicios: b.ejercicios.map((e, j) => j === ei ? { ...e, [campo]: valor } : e) } : b
+    ))
+  }
 
   async function handleAsignar() {
-    if (!clienteId) { setErrorA('Selecciona un cliente'); return }
+    if (!clienteId)   { setErrorA('Selecciona un cliente');       return }
+    if (!fechaInicio) { setErrorA('La fecha de inicio es obligatoria'); return }
+    if (!fechaFin)    { setErrorA('La fecha de fin es obligatoria');    return }
     setErrorA(''); setSavingA(true)
     try {
-      await assignmentsApi.createAssignment(clienteId, {
+      const asignacion = await assignmentsApi.createAssignment(clienteId, {
         id_rutina:    rutinaAsignar.id_rutina,
-        fecha_inicio: fechaInicio || null,
+        fecha_inicio: fechaInicio,
+        fecha_fin:    fechaFin,
       })
+      for (const bloque of bloquesAsignar) {
+        for (const ej of bloque.ejercicios) {
+          if (ej.override_series !== '' || ej.override_reps !== '' || ej.override_peso !== '') {
+            await assignmentsApi.createAssignmentExercise(asignacion.id_asignacion_rutina, {
+              id_bloque_rutina_ej: ej.id_bloque_rutina_ejercicio,
+              series_plan: ej.override_series !== '' ? Number(ej.override_series) : null,
+              reps_plan:   ej.override_reps   !== '' ? Number(ej.override_reps)   : null,
+              peso_obj:    ej.override_peso   !== '' ? Number(ej.override_peso)   : null,
+            })
+          }
+        }
+      }
       cerrarAsignar()
     } catch (err) { setErrorA(err.message || 'Error al asignar') }
     finally { setSavingA(false) }
@@ -332,9 +407,35 @@ function TabRutinas() {
                     <div key={ei} className="flex gap-2 items-center">
                       <div className="flex-1">
                         <Input
-                          placeholder="Nombre del ejercicio"
-                          value={ej}
-                          onChange={(e) => updateEjercicio(bi, ei, e.target.value)}
+                          type="select"
+                          placeholder="Selecciona ejercicio"
+                          value={ej.id_ejercicio}
+                          options={ejercicioOptions}
+                          onChange={(e) => updateEjercicio(bi, ei, 'id_ejercicio', e.target.value)}
+                        />
+                      </div>
+                      <div className="w-16">
+                        <Input
+                          type="number"
+                          placeholder="Series"
+                          value={ej.series_plan}
+                          onChange={(e) => updateEjercicio(bi, ei, 'series_plan', e.target.value)}
+                        />
+                      </div>
+                      <div className="w-16">
+                        <Input
+                          type="number"
+                          placeholder="Reps"
+                          value={ej.reps_plan}
+                          onChange={(e) => updateEjercicio(bi, ei, 'reps_plan', e.target.value)}
+                        />
+                      </div>
+                      <div className="w-20">
+                        <Input
+                          type="number"
+                          placeholder="Peso kg"
+                          value={ej.peso_obj}
+                          onChange={(e) => updateEjercicio(bi, ei, 'peso_obj', e.target.value)}
                         />
                       </div>
                       {bloque.ejercicios.length > 1 && (
@@ -350,8 +451,6 @@ function TabRutinas() {
               <button onClick={addBloque} className="text-sm text-[#1D7FD8] hover:underline self-start">
                 + Añadir bloque
               </button>
-              {/* TODO: los ejercicios escritos son texto libre por ahora —
-                  conectar con el catálogo real usando un selector de id_ejercicio */}
             </div>
           </div>
 
@@ -365,33 +464,94 @@ function TabRutinas() {
 
       {/* Modal asignar rutina */}
       <Modal isOpen={modalAsignar} onClose={cerrarAsignar} title="Asignar rutina">
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-5">
           {rutinaAsignar && (
             <div className="bg-blue-50 rounded-xl px-4 py-3">
               <p className="font-semibold text-gray-800">{rutinaAsignar.nombre}</p>
+              {rutinaAsignar.nivel && <p className="text-xs text-gray-500 mt-0.5">Nivel: {rutinaAsignar.nivel}</p>}
             </div>
           )}
+
+          {/* Datos de la asignación */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Clientes a asignar</p>
-            <Input
-              type="select"
-              placeholder={loadingClientes ? 'Cargando clientes…' : 'Selecciona los clientes'}
-              value={clienteId}
-              onChange={(e) => setClienteId(e.target.value)}
-              options={clienteOptions}
-              error={errorA}
-            />
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Datos de la asignación</p>
+            <div className="flex flex-col gap-3">
+              <Input
+                type="select"
+                placeholder={loadingClientes ? 'Cargando clientes…' : 'Selecciona un cliente'}
+                value={clienteId}
+                onChange={(e) => setClienteId(e.target.value)}
+                options={clienteOptions}
+              />
+              <div className="flex gap-3">
+                <Input label="Fecha inicio" type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
+                <Input label="Fecha fin"    type="date" value={fechaFin}    onChange={(e) => setFechaFin(e.target.value)} />
+              </div>
+            </div>
           </div>
+
+          {/* Personalización de ejercicios por cliente */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Grupos a asignar</p>
-            {/* TODO: GET /api/v1/grupos cuando exista el endpoint */}
-            <Input type="select" placeholder="Selecciona los grupos" value="" onChange={() => {}} options={[]} />
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+              Personalización por cliente <span className="normal-case font-normal text-gray-400">(opcional — deja vacío para usar los valores de la rutina)</span>
+            </p>
+            {loadingBloques ? (
+              <div className="flex justify-center py-4">
+                <span className="w-6 h-6 border-4 border-[#1D7FD8] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : bloquesAsignar.length === 0 ? (
+              <p className="text-sm text-gray-400">Esta rutina no tiene ejercicios definidos</p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {bloquesAsignar.map((bloque, bi) => (
+                  <div key={bloque.id_bloque_rutina} className="bg-gray-50 rounded-xl p-3 flex flex-col gap-2">
+                    <p className="text-xs font-semibold text-[#1D7FD8]">
+                      Día {bloque.numero_dia}{bloque.nombre ? ` — ${bloque.nombre}` : ''}
+                    </p>
+                    {bloque.ejercicios.length === 0 ? (
+                      <p className="text-xs text-gray-400">Sin ejercicios en este bloque</p>
+                    ) : (
+                      bloque.ejercicios.map((ej, ei) => {
+                        const ejNombre = ejerciciosDisp.find((e) => e.id_ejercicio === ej.id_ejercicio)?.nombre ?? `Ejercicio ${ej.orden}`
+                        return (
+                          <div key={ej.id_bloque_rutina_ejercicio} className="flex gap-2 items-center">
+                            <span className="flex-1 text-sm text-gray-700 truncate">{ejNombre}</span>
+                            <div className="w-16">
+                              <Input
+                                type="number"
+                                placeholder={String(ej.series_plan)}
+                                value={ej.override_series}
+                                onChange={(e) => updateOverride(bi, ei, 'override_series', e.target.value)}
+                              />
+                            </div>
+                            <div className="w-16">
+                              <Input
+                                type="number"
+                                placeholder={String(ej.reps_plan)}
+                                value={ej.override_reps}
+                                onChange={(e) => updateOverride(bi, ei, 'override_reps', e.target.value)}
+                              />
+                            </div>
+                            <div className="w-20">
+                              <Input
+                                type="number"
+                                placeholder={ej.peso_obj != null ? String(ej.peso_obj) : 'Peso kg'}
+                                value={ej.override_peso}
+                                onChange={(e) => updateOverride(bi, ei, 'override_peso', e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        )
+                      })
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Fecha inicio</p>
-            <Input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
+
+          {errorA && <p className="text-sm text-red-500">{errorA}</p>}
+          <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={cerrarAsignar}>Cancelar</Button>
             <Button loading={savingA} onClick={handleAsignar}>Guardar</Button>
           </div>

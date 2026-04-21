@@ -221,6 +221,10 @@ export const assignmentsApi = {
     return request(`/assignments/${id}/status`, { method: 'PATCH', body: { estado: status } })
   },
 
+  updateAssignment(id, data) {
+    return request(`/assignments/${id}`, { method: 'PUT', body: data })
+  },
+
   getClientAssignments(clientId) {
     return request(`/assignments/clients/${clientId}`)
   },
@@ -315,6 +319,10 @@ export const analyticsApi = {
 
   getTrainerClientsTable(periodo = 'semanal') {
     return request(`/analytics/trainer/clients/table?periodo=${periodo}`)
+  },
+
+  getTrainerEvolution(periodo = 'semanal') {
+    return request(`/analytics/trainer/evolution?periodo=${periodo}`)
   },
 
   getTrainerClientEvolution(clientId, periodo = 'semanal') {
