@@ -76,6 +76,14 @@ class TodayWorkoutResponse(BaseModel):
     nombre_rutina: str
     ejercicios: list[str]
 
+class ClientRecentActivityItemResponse(BaseModel):
+    fecha_hora: datetime
+    nota_rendimiento: Optional[float] = None
+    conformidad: Optional[float] = None
+
+class ClientRecentActivityResponse(BaseModel):
+    actividades: list[ClientRecentActivityItemResponse]
+
 class ExerciseDistributionItemResponse(BaseModel):
     categoria: str
     cantidad: int

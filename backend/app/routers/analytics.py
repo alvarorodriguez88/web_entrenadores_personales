@@ -9,7 +9,7 @@ from app.schemas.analytic import (
     TrainerKPIsResponse, TrainerAlertsResponse, RecentActivityItemResponse,
     PerformanceDistributionResponse, ClientTableRowResponse,
     EvolutionResponse, ClientKPIsResponse, WeeklyCalendarResponse,
-    TodayWorkoutResponse, ExerciseDistributionResponse
+    TodayWorkoutResponse, ExerciseDistributionResponse, ClientRecentActivityResponse
 )
 from app.services import analytics_service
 
@@ -60,6 +60,11 @@ def get_client_weekly_calendar(client: Cliente = Depends(get_current_client), db
 @router.get("/client/today-workout", response_model=Optional[TodayWorkoutResponse])
 def get_client_today_workout(client: Cliente = Depends(get_current_client), db: Session = Depends(get_db)):
     return analytics_service.get_client_today_workout(db, client.id_usuario)
+
+@router.get("/client/recent-activity", response_model=ClientRecentActivityResponse)
+def get_client_recent_activity(client: Cliente = Depends(get_current_client), db: Session = Depends(get_db)):
+    actividades = analytics_service.get_client_recent_activity(db, client.id_usuario)
+    return {"actividades": actividades}
 
 @router.get("/client/evolution", response_model=EvolutionResponse)
 def get_client_evolution(periodo: Literal["semanal", "mensual"] = "semanal", client: Cliente = Depends(get_current_client), db: Session = Depends(get_db)):

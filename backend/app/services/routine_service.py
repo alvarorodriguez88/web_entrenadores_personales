@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 
 from app.models.routine import Rutina, BloqueRutina, BloqueRutinaEjercicio
+from app.models.assignment import AsignacionRutina
 from app.models.exercise import Ejercicio
 from app.schemas.routine import (
     RoutineCreate, RoutineUpdate,
@@ -16,10 +17,30 @@ def get_routines(db: Session, trainer_id: int) -> list[Rutina]:
         Rutina.id_entrenador == trainer_id
     ).all()
 
+def get_client_routines(db: Session, client_id: int) -> list[Rutina]:
+    return db.query(Rutina).join(AsignacionRutina).filter(
+        AsignacionRutina.estado == 'ACTIVA',
+        AsignacionRutina.id_cliente == client_id,
+    ).all()
+
 def get_routine_by_id(db: Session, routine_id: int, trainer_id: int) -> Rutina:
     routine = db.query(Rutina).filter(
         Rutina.id_rutina == routine_id,
         Rutina.id_entrenador == trainer_id
+    ).first()
+
+    if not routine:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Routine not found"
+        )
+    return routine
+
+def get_client_routine(db: Session, routine_id: int, client_id: int) -> Rutina:
+    routine = db.query(Rutina).join(AsignacionRutina).filter(
+        Rutina.id_rutina == routine_id,
+        AsignacionRutina.estado == 'ACTIVA',
+        AsignacionRutina.id_cliente == client_id,
     ).first()
 
     if not routine:

@@ -467,6 +467,24 @@ def get_client_today_workout(db: Session, client_id: int) -> dict | None:
         "ejercicios": [e.nombre for e in exercises],
     }
 
+def get_client_recent_activity(db: Session, client_id: int) -> list[dict]:
+    sessions = db.query(SesionRutina).filter(
+        SesionRutina.id_asignacion.in_(
+            db.query(AsignacionRutina.id_asignacion_rutina).filter(
+                AsignacionRutina.id_cliente == client_id
+            )
+        )
+    ).order_by(SesionRutina.fecha_hora.desc()).limit(5).all()
+
+    return [
+        {
+            "fecha_hora": s.fecha_hora,
+            "nota_rendimiento": float(s.nota_rendimiento) if s.nota_rendimiento else None,
+            "conformidad": float(s.conformidad) if s.conformidad else None
+        }
+        for s in sessions
+    ]
+
 def get_client_evolution(db: Session, client_id: int, periodo: str) -> list[dict]:
     return _get_evolution_points(db, client_id, periodo)
 
