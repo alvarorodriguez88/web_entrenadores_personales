@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { assignmentsApi, metricsApi } from '../../services/api'
+import { assignmentsApi, metricsApi, routinesApi, analyticsApi } from '../../services/api'
 import Card   from '../../components/shared/Card'
 import Button from '../../components/shared/Button'
 
@@ -34,8 +34,11 @@ function InicioPage() {
   const weekDays = getWeekDays()
   const todayIdx = weekDays.findIndex((d) => d.isToday)
 
+  const [rutina,     setRutina]     = useState(null)
   const [asignacion, setAsignacion] = useState(null)
+  const [evolution,  setEvolution]  = useState(null)
   const [metricas,   setMetricas]   = useState([])
+  const [recentActivity, setRecentActivity] = useState([])
   const [loading,    setLoading]    = useState(true)
   const [error,      setError]      = useState('')
 
@@ -44,18 +47,33 @@ function InicioPage() {
       setLoading(true)
       setError('')
       try {
-        const [assignments, metricasData] = await Promise.allSettled([
+        const [assignments, evolutionData, metricasData, recentActivityData] = await Promise.allSettled([
           assignmentsApi.getMyAssignments(),
+          analyticsApi.getClientEvolution(),
           metricsApi.getMyMetrics(),
+          analyticsApi.getClientRecentActivity()
         ])
 
         if (assignments.status === 'fulfilled') {
           const activa = assignments.value.find((a) => a.estado === 'ACTIVA') ?? null
           setAsignacion(activa)
+
+          if (activa) {
+            const rutinaData = await routinesApi.getClientRoutine(activa.id_rutina)
+            setRutina(rutinaData)
+          }
         }
 
         if (metricasData.status === 'fulfilled') {
           setMetricas(metricasData.value)
+        }
+
+        if (evolutionData.status === 'fulfilled') {
+          setEvolution(evolutionData.value)
+        }
+
+        if (recentActivityData.status === 'fulfilled') {
+          setRecentActivity(recentActivityData.value)
         }
       } catch (err) {
         setError(err.message || 'Error al cargar los datos')
@@ -70,11 +88,22 @@ function InicioPage() {
     ? metricas.reduce((a, b) => (a.fecha >= b.fecha ? a : b))
     : null
 
+  const ultimaEvolucion = evolution?.puntos?.length > 0
+    ? evolution.puntos.reduce((a, b) => (a.fecha >= b.fecha ? a : b))
+    : null
+
+  const evolucionRow = [
+    { label: 'Cumplimiento', value: ultimaEvolucion?.cumplimiento != null ? `${ultimaEvolucion.cumplimiento}%` : '—' },
+    { label: 'Rendimiento', value: ultimaEvolucion?.rendimiento != null ? `${ultimaEvolucion.rendimiento}%` : '—' },
+    { label: 'Conformidad', value: ultimaEvolucion?.conformidad != null ? `${ultimaEvolucion.conformidad}%` : '—' },
+  ]
+
   const metricasRow = [
     { label: 'Peso',    value: ultimaMetrica?.peso_kg          != null ? `${ultimaMetrica.peso_kg} kg`   : '—' },
     { label: 'Altura',  value: ultimaMetrica?.altura_cm        != null ? `${ultimaMetrica.altura_cm} cm` : '—' },
     { label: '% Grasa', value: ultimaMetrica?.grasa_pct        != null ? `${ultimaMetrica.grasa_pct}%`   : '—' },
   ]
+
 
   if (loading) {
     return (
@@ -137,7 +166,7 @@ function InicioPage() {
 
           {/* Métricas físicas */}
           <div className="flex divide-x divide-gray-200">
-            {metricasRow.map((m) => (
+            {evolucionRow.map((m) => (
               <div key={m.label} className="flex-1 flex flex-col items-center gap-1 px-4 py-2">
                 <p className="text-xl font-bold text-gray-800">{m.value}</p>
                 <p className="text-xs text-gray-500 text-center leading-tight">{m.label}</p>
@@ -151,17 +180,24 @@ function InicioPage() {
       <section className="flex flex-col gap-4">
         <h2 className="text-lg font-bold text-gray-800">Tu entrenamiento de hoy</h2>
 
-        {asignacion ? (
+        {rutina ? (
           <Card>
-            <div className="flex items-center justify-between gap-6">
-              <div className="flex flex-col gap-2 flex-1">
-                {/* TODO: mostrar nombre real cuando AssignmentResponse incluya datos de rutina */}
+            <div className="flex divide-x divide-gray-200 items-center justify-between gap-6">
+              <div className="flex flex-col gap-2">
                 <p className="font-bold text-gray-900 text-lg leading-tight">
-                  Rutina #{asignacion.id_rutina}
+                  {rutina?.nombre}
                 </p>
-                <span className="self-start text-sm text-[#1D7FD8] bg-blue-50 px-3 py-1 rounded-lg">
-                  Desde {new Date(asignacion.fecha_inicio).toLocaleDateString('es-ES')}
-                </span>
+                <p className="text-sm text-gray-500">
+                  Dificultad: {rutina?.nivel}
+                </p>
+              </div>
+              <div className="text-sm text-gray-500">
+                <p className="mb-1">
+                Objetivo: {rutina?.objetivo}
+                </p>
+                <p>
+                  Descripción: {rutina?.descripcion}
+                </p>
               </div>
               <Button onClick={() => navigate('/client/entrenamiento')}>
                 Comenzar entreno
@@ -183,35 +219,25 @@ function InicioPage() {
         {/* TODO: sustituir por datos reales de rendimiento semanal */}
         <Card title="Estado general">
           <div className="flex flex-col gap-1.5">
-            <p className="font-semibold text-gray-800">Buen rendimiento</p>
-            <p className="text-sm text-gray-500">
-              Mejoraste un 12% en relación a la semana pasada
-            </p>
+            {metricasRow.map((m) => (
+              <div key={m.label} className="flex items-center gap-3 text-sm">
+                <span className="text-xl font-bold text-gray-800">{m.label}</span>
+                <span className="text-xl text-gray-800">{m.value}</span>
+              </div>
+            ))}
           </div>
         </Card>
 
         {/* TODO: sustituir diasEntrenadosMock con sesiones reales */}
-        <Card title="Esta semana">
+        <Card title="Actividad reciente">
           <div className="flex flex-col gap-2">
-            {DAY_LABELS.map((label, i) => {
-              const trained = diasEntrenadosMock.includes(i)
-              const isToday = i === todayIdx
-
-              return (
-                <div key={label} className="flex items-center gap-3 text-sm">
-                  <span className="w-7 text-gray-500 shrink-0">{label}</span>
-                  <span className={`flex-1 text-xs px-2 py-0.5 rounded-full text-center ${
-                    trained
-                      ? 'bg-green-100 text-green-700'
-                      : isToday
-                        ? 'bg-blue-50 text-[#1D7FD8]'
-                        : 'bg-gray-100 text-gray-400'
-                  }`}>
-                    {trained ? 'Completado' : isToday ? 'Hoy' : '—'}
-                  </span>
-                </div>
-              )
-            })}
+            {recentActivity.actividades.map((activity) => (
+              <div key={activity.fecha_hora} className="flex items-center gap-3 text-sm">
+                <span className="text-gray-500">{activity.fecha_hora}</span>
+                <span className="text-gray-800">Rendimiento: {activity.nota_rendimiento}</span>
+                <span className="text-gray-800">Conformidad: {activity.conformidad}</span>
+              </div>
+            ))}
           </div>
         </Card>
 

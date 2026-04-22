@@ -125,6 +125,14 @@ export const routinesApi = {
     return request(`/routines/${id}`)
   },
 
+  getMyRoutines() {
+    return request('/routines/client')
+  },
+
+  getClientRoutine(id) {
+    return request(`/routines/client/${id}`)
+  },
+
   createRoutine(data) {
     return request('/routines', { method: 'POST', body: data })
   },
@@ -265,6 +273,10 @@ export const assignmentsApi = {
     return request('/assignments/me')
   },
 
+  getMySessionsOverview() {
+    return request('/assignments/me/sessions')
+  },
+
   getMyAssignmentExercises(assignmentId) {
     return request(`/assignments/me/${assignmentId}/exercises`)
   },
@@ -348,6 +360,10 @@ export const analyticsApi = {
 
   getClientExerciseDistribution() {
     return request('/analytics/client/exercise-distribution')
+  },
+
+  getClientRecentActivity() {
+    return request('/analytics/client/recent-activity')
   },
 }
 
