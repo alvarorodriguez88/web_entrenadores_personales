@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import Table  from '../../components/shared/Table'
 import Modal  from '../../components/shared/Modal'
 import Button from '../../components/shared/Button'
@@ -25,13 +25,14 @@ const emptyForm = { nombre: '', apellidos: '', email: '', telefono: '', sexo: ''
 
 function ClientesPage() {
   const navigate = useNavigate()
+  const location = useLocation()
 
   const [clientes,     setClientes]     = useState([])
   const [loading,      setLoading]      = useState(true)
   const [error,        setError]        = useState('')
   const [busqueda,     setBusqueda]     = useState('')
   const [filtroGrupo,  setFiltroGrupo]  = useState('')
-  const [modalAbierto, setModalAbierto] = useState(false)
+  const [modalAbierto, setModalAbierto] = useState(!!location.state?.openModal)
   const [form,         setForm]         = useState(emptyForm)
   const [errors,       setErrors]       = useState({})
   const [success,      setSuccess]      = useState(false)

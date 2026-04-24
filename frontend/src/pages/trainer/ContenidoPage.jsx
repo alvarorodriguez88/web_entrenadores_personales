@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { Upload } from 'lucide-react'
 import { exercisesApi, routinesApi, assignmentsApi, usersApi } from '../../services/api'
 import TabBar    from '../../components/shared/TabBar'
@@ -668,7 +669,8 @@ function TabMultimedia() {
 // PÁGINA PRINCIPAL
 // ─────────────────────────────────────────────────────────────────
 function ContenidoPage() {
-  const [activeTab, setActiveTab] = useState('Ejercicios')
+  const location = useLocation()
+  const [activeTab, setActiveTab] = useState(location.state?.tab ?? 'Ejercicios')
 
   return (
     <div className="p-8 flex flex-col gap-6">
