@@ -71,10 +71,33 @@ class CalendarDayResponse(BaseModel):
 class WeeklyCalendarResponse(BaseModel):
     dias: list[CalendarDayResponse]
 
+class TodayBlockExerciseResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id_ejercicio:   int
+    nombre:         str
+    grupo_muscular: Optional[str] = None
+    equipamiento:   Optional[str] = None
+    descripcion:    Optional[str] = None
+    video_url:      Optional[str] = None
+    categorias:     list[str] = []
+    series_plan:    int
+    reps_plan:      int
+    peso_obj:       Optional[float] = None
+    descanso_seg:   Optional[int] = None
+    notas:          Optional[str] = None
+    orden:          int
+
 class TodayWorkoutResponse(BaseModel):
-    nombre_bloque: Optional[str] = None
-    nombre_rutina: str
-    ejercicios: list[str]
+    nombre_rutina:      str
+    nivel_rutina:       Optional[str] = None
+    objetivo_rutina:    Optional[str] = None
+    descripcion_rutina: Optional[str] = None
+    nombre_bloque:      Optional[str] = None
+    numero_dia:         int
+    notas_bloque:       Optional[str] = None
+    fecha_inicio:       Optional[date] = None
+    fecha_fin:          Optional[date] = None
+    ejercicios:         list[TodayBlockExerciseResponse] = []
 
 class ClientRecentActivityItemResponse(BaseModel):
     fecha_hora: datetime
