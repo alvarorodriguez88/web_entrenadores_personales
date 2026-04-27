@@ -327,6 +327,44 @@ def get_trainer_performance_distribution(db: Session, trainer_id: int) -> dict:
 
     return {"alto": alto, "medio": medio, "bajo": bajo, "inactivo": inactivo}
 
+def get_trainer_clients_list(db: Session, trainer_id: int) -> list[dict]:
+    clients = get_trainer_clients(db, trainer_id)
+    if not clients:
+        return []
+
+    client_ids = [c.id_usuario for c in clients]
+
+    assignments = db.query(AsignacionRutina, Rutina).join(
+        Rutina, AsignacionRutina.id_rutina == Rutina.id_rutina
+    ).filter(
+        AsignacionRutina.id_cliente.in_(client_ids),
+        AsignacionRutina.estado == "ACTIVA"
+    ).all()
+    rutina_map = {a.id_cliente: r.nombre for a, r in assignments}
+
+    sesion_rows = db.query(
+        AsignacionRutina.id_cliente,
+        func.max(SesionRutina.fecha_hora).label("ultima")
+    ).join(
+        SesionRutina, SesionRutina.id_asignacion == AsignacionRutina.id_asignacion_rutina
+    ).filter(
+        AsignacionRutina.id_cliente.in_(client_ids)
+    ).group_by(AsignacionRutina.id_cliente).all()
+    sesion_map = {row.id_cliente: row.ultima for row in sesion_rows}
+
+    return [
+        {
+            "id_cliente":    c.id_usuario,
+            "nombre":        c.user.nombre,
+            "apellidos":     c.user.apellidos,
+            "email":         c.user.email,
+            "nivel":         c.nivel,
+            "rutina_activa": rutina_map.get(c.id_usuario),
+            "ultima_sesion": sesion_map.get(c.id_usuario),
+        }
+        for c in clients
+    ]
+
 def get_trainer_clients_table(db: Session, trainer_id: int, periodo: str) -> list[dict]:
     start, end, _, _ = _get_period_range(periodo)
     clients = get_trainer_clients(db, trainer_id)
@@ -342,6 +380,7 @@ def get_trainer_clients_table(db: Session, trainer_id: int, periodo: str) -> lis
             "nombre": client.user.nombre,
             "apellidos": client.user.apellidos,
             "cumplimiento_pct": _get_client_cumplimiento(db, client.id_usuario, start, end),
+            "conformidad_avg": _get_client_conformidad(db, client.id_usuario, start, end),
             "rendimiento_avg": _get_client_rendimiento(db, client.id_usuario, start, end),
             "ultima_sesion": ultima_sesion[0] if ultima_sesion else None,
             "nivel": client.nivel,
@@ -435,7 +474,7 @@ def get_client_weekly_calendar(db: Session, client_id: int) -> list[dict]:
 
 def get_client_today_workout(db: Session, client_id: int) -> dict | None:
     today = date.today()
-    weekday = today.weekday() + 1  # 1=Lun … 7=Dom
+    weekday = today.weekday() + 1
 
     assignment = db.query(AsignacionRutina).filter(
         AsignacionRutina.id_cliente == client_id,

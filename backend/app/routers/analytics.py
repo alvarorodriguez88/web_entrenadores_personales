@@ -7,7 +7,7 @@ from app.dependencies import get_current_trainer, get_current_client
 from app.models.user import Entrenador, Cliente
 from app.schemas.analytic import (
     TrainerKPIsResponse, TrainerAlertsResponse, RecentActivityItemResponse,
-    PerformanceDistributionResponse, ClientTableRowResponse,
+    PerformanceDistributionResponse, ClientTableRowResponse, ClientListRowResponse,
     EvolutionResponse, ClientKPIsResponse, WeeklyCalendarResponse,
     TodayWorkoutResponse, ExerciseDistributionResponse, ClientRecentActivityResponse
 )
@@ -32,6 +32,10 @@ def get_trainer_recent_activity(trainer: Entrenador = Depends(get_current_traine
 @router.get("/trainer/performance-distribution", response_model=PerformanceDistributionResponse)
 def get_trainer_performance_distribution(trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
     return analytics_service.get_trainer_performance_distribution(db, trainer.id_usuario)
+
+@router.get("/trainer/clients/list", response_model=list[ClientListRowResponse])
+def get_trainer_clients_list(trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
+    return analytics_service.get_trainer_clients_list(db, trainer.id_usuario)
 
 @router.get("/trainer/clients/table", response_model=list[ClientTableRowResponse])
 def get_trainer_clients_table(periodo: Literal["semanal", "mensual"] = "semanal", trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):

@@ -41,9 +41,19 @@ class ClientTableRowResponse(BaseModel):
     nombre: str
     apellidos: str
     cumplimiento_pct: float
+    conformidad_avg: float
     rendimiento_avg: float
     ultima_sesion: Optional[datetime] = None
     nivel: Optional[str] = None
+
+class ClientListRowResponse(BaseModel):
+    id_cliente: int
+    nombre: str
+    apellidos: str
+    email: str
+    nivel: Optional[str] = None
+    rutina_activa: Optional[str] = None
+    ultima_sesion: Optional[datetime] = None
 
 class EvolutionPointResponse(BaseModel):
     fecha: str
