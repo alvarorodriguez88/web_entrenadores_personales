@@ -1,43 +1,31 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Upload } from 'lucide-react'
-import { exercisesApi, routinesApi, assignmentsApi, usersApi } from '../../services/api'
-import TabBar    from '../../components/shared/TabBar'
-import Table     from '../../components/shared/Table'
-import Modal     from '../../components/shared/Modal'
-import Button    from '../../components/shared/Button'
-import Input     from '../../components/shared/Input'
+import { Upload, Dumbbell, ClipboardList, Film, Image as ImageIcon } from 'lucide-react'
+import { exercisesApi, routinesApi } from '../../services/api'
+import TabBar              from '../../components/shared/TabBar'
+import Table               from '../../components/shared/Table'
+import Modal               from '../../components/shared/Modal'
+import Button              from '../../components/shared/Button'
+import Input               from '../../components/shared/Input'
+import ModalCrearEjercicio from '../../components/trainer/ModalCrearEjercicio'
+import ModalCrearRutina    from '../../components/trainer/ModalCrearRutina'
+import ModalAsignarRutina  from '../../components/trainer/ModalAsignarRutina'
 
-const TABS     = ['Ejercicios', 'Rutinas', 'Multimedia']
-
-const NIVEL_OPTIONS = [
-  { value: 'PRINCIPIANTE', label: 'Principiante' },
-  { value: 'INTERMEDIO',   label: 'Intermedio'   },
-  { value: 'AVANZADO',     label: 'Avanzado'     },
-]
-
-const columnasEjercicios = [
-  { key: 'nombre',         label: 'Ejercicio'      },
-  { key: 'grupo_muscular', label: 'Grupo muscular' },
-  { key: 'equipamiento',   label: 'Equipamiento'   },
-  { key: 'archivado',      label: 'Estado',        render: (v) => v ? 'Archivado' : 'Activo' },
-]
-
-const emptyEjForm = { nombre: '', descripcion: '', grupo_muscular: '', equipamiento: '', video_url: '' }
+const TABS = ['Ejercicios', 'Rutinas', 'Multimedia']
 
 
+// ─────────────────────────────────────────────────────────────────
+// PESTAÑA EJERCICIOS
+// ─────────────────────────────────────────────────────────────────
 function TabEjercicios() {
   const [ejercicios,   setEjercicios]   = useState([])
   const [loadingEj,    setLoadingEj]    = useState(true)
   const [errorEj,      setErrorEj]      = useState('')
-
-  const [busqueda,    setBusqueda]    = useState('')
-  const [filtroGrupo, setFiltroGrupo] = useState('')
-  const [filtroEquip, setFiltroEquip] = useState('')
-  const [modalAbierto, setModalAbierto] = useState(false)
-  const [form,  setForm]  = useState(emptyEjForm)
-  const [error, setError] = useState('')
-  const [saving, setSaving] = useState(false)
+  const [busqueda,     setBusqueda]     = useState('')
+  const [filtroGrupo,  setFiltroGrupo]  = useState('')
+  const [filtroEquip,  setFiltroEquip]  = useState('')
+  const [modalEj,      setModalEj]      = useState(false)
+  const [toggling,     setToggling]     = useState(new Set())
 
   async function cargarEjercicios() {
     setLoadingEj(true)
@@ -54,31 +42,67 @@ function TabEjercicios() {
 
   useEffect(() => { cargarEjercicios() }, [])
 
+  async function handleToggle(ejercicio) {
+    const id = ejercicio.id_ejercicio
+    setToggling(prev => new Set([...prev, id]))
+    try {
+      const updated = ejercicio.archivado
+        ? await exercisesApi.unarchiveExercise(id)
+        : await exercisesApi.archiveExercise(id)
+      setEjercicios(prev => prev.map(e => e.id_ejercicio === id ? updated : e))
+    } catch {
+      // silencioso — el estado local no cambia
+    } finally {
+      setToggling(prev => { const s = new Set(prev); s.delete(id); return s })
+    }
+  }
+
+  const columnas = [
+    { key: 'nombre', label: 'Ejercicio' },
+    {
+      key: 'grupo_muscular',
+      label: 'Grupo muscular',
+      render: (v) => v
+        ? <span className="inline-flex px-2 py-0.5 rounded-md bg-blue-50 text-[#1D7FD8] text-xs font-medium">{v}</span>
+        : <span className="text-gray-300">—</span>,
+    },
+    { key: 'equipamiento', label: 'Equipamiento' },
+    {
+      key: 'archivado',
+      label: 'Estado',
+      render: (v) => (
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
+          ${v ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-700'}`}>
+          {v ? 'Archivado' : 'Activo'}
+        </span>
+      ),
+    },
+    {
+      key: '_action',
+      label: '',
+      render: (_, row) => {
+        const loading = toggling.has(row.id_ejercicio)
+        return (
+          <button
+            disabled={loading}
+            onClick={(e) => { e.stopPropagation(); handleToggle(row) }}
+            className={`text-xs font-semibold px-3 py-1 rounded-lg transition-colors disabled:opacity-50
+              ${row.archivado
+                ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+          >
+            {loading ? '…' : row.archivado ? 'Activar' : 'Archivar'}
+          </button>
+        )
+      },
+    },
+  ]
+
   const filtrados = ejercicios.filter((e) =>
     e.nombre.toLowerCase().includes(busqueda.toLowerCase()) &&
     (!filtroGrupo || (e.grupo_muscular ?? '').toLowerCase().includes(filtroGrupo.toLowerCase())) &&
     (!filtroEquip || (e.equipamiento ?? '').toLowerCase().includes(filtroEquip.toLowerCase()))
   )
-
-  function setField(k, v) { setForm((p) => ({ ...p, [k]: v })) }
-  function cerrar() { setModalAbierto(false); setForm(emptyEjForm); setError('') }
-
-  async function handleGuardar() {
-    if (!form.nombre.trim()) { setError('El nombre es obligatorio'); return }
-    setError(''); setSaving(true)
-    try {
-      await exercisesApi.createExercise({
-        nombre:         form.nombre,
-        descripcion:    form.descripcion    || '',
-        grupo_muscular: form.grupo_muscular || null,
-        equipamiento:   form.equipamiento   || null,
-        video_url:      form.video_url      || null,
-      })
-      cerrar()
-      cargarEjercicios()
-    } catch (err) { setError(err.message || 'Error al crear') }
-    finally { setSaving(false) }
-  }
 
   return (
     <>
@@ -92,66 +116,113 @@ function TabEjercicios() {
         <div className="w-40">
           <Input placeholder="Equipamiento"     value={filtroEquip} onChange={(e) => setFiltroEquip(e.target.value)} />
         </div>
-        <Button onClick={() => setModalAbierto(true)}>Crear ejercicio</Button>
+        <Button onClick={() => setModalEj(true)}>Crear ejercicio</Button>
       </div>
 
       <div className="mt-4">
-        <p className="text-sm font-semibold text-gray-700 mb-2">Tabla de ejercicios</p>
+        <div className="flex items-center gap-2 mb-2">
+          <p className="text-sm font-semibold text-gray-700">Tabla de ejercicios</p>
+          {!loadingEj && !errorEj && (
+            <span className="text-xs font-semibold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+              {filtrados.length}
+            </span>
+          )}
+        </div>
         {loadingEj ? (
           <div className="flex justify-center py-12">
             <span className="w-7 h-7 border-4 border-[#1D7FD8] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : errorEj ? (
           <p className="text-sm text-red-500 py-8 text-center">{errorEj}</p>
+        ) : filtrados.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 py-16 text-gray-300">
+            <Dumbbell size={36} />
+            <p className="text-sm">No se encontraron ejercicios</p>
+          </div>
         ) : (
-          <Table columns={columnasEjercicios} data={filtrados} emptyMessage="No se encontraron ejercicios" />
+          <Table columns={columnas} data={filtrados} />
         )}
       </div>
 
-      <Modal isOpen={modalAbierto} onClose={cerrar} title="Crear ejercicio">
-        <div className="flex flex-col gap-4">
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Datos del ejercicio</p>
-            <div className="flex flex-col gap-3">
-              <Input placeholder="Nombre del ejercicio" value={form.nombre} onChange={(e) => setField('nombre', e.target.value)} error={error && !form.nombre.trim() ? error : ''} />
-              <div className="flex gap-3">
-                <Input placeholder="Grupo muscular" value={form.grupo_muscular} onChange={(e) => setField('grupo_muscular', e.target.value)} />
-                <Input placeholder="Equipamiento"   value={form.equipamiento}   onChange={(e) => setField('equipamiento',   e.target.value)} />
-              </div>
-              <Input type="textarea" placeholder="Descripción" value={form.descripcion} onChange={(e) => setField('descripcion', e.target.value)} />
-            </div>
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Contenido multimedia</p>
-            <Input placeholder="URL del vídeo / imagen" value={form.video_url} onChange={(e) => setField('video_url', e.target.value)} />
-          </div>
-          {error && form.nombre.trim() && <p className="text-sm text-red-500">{error}</p>}
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" onClick={cerrar}>Cancelar</Button>
-            <Button loading={saving} onClick={handleGuardar}>Guardar</Button>
-          </div>
-        </div>
-      </Modal>
+      <ModalCrearEjercicio
+        isOpen={modalEj}
+        onClose={() => setModalEj(false)}
+        onSuccess={cargarEjercicios}
+      />
     </>
   )
 }
 
 
-const emptyRutinaForm = { nombre: '', objetivo: '', nivel: '', descripcion: '' }
-const newEj     = () => ({ id_ejercicio: '', series_plan: 3, reps_plan: 10, peso_obj: '' })
-const newBloque = () => ({ dia: 1, ejercicios: [newEj()] })
+// ─────────────────────────────────────────────────────────────────
+// PESTAÑA RUTINAS
+// ─────────────────────────────────────────────────────────────────
+const NIVEL_COLOR = {
+  PRINCIPIANTE: { strip: 'bg-green-400',  badge: 'bg-green-100 text-green-700'   },
+  INTERMEDIO:   { strip: 'bg-[#1D7FD8]',  badge: 'bg-blue-100 text-[#1D7FD8]'   },
+  AVANZADO:     { strip: 'bg-purple-500', badge: 'bg-purple-100 text-purple-700' },
+}
 
-function RutinaCard({ rutina, onAsignar }) {
+function nivelColors(nivel) {
+  return NIVEL_COLOR[(nivel ?? '').toUpperCase()] ?? { strip: 'bg-gray-200', badge: 'bg-gray-100 text-gray-500' }
+}
+
+function RutinaCard({ rutina, onAsignar, onToggle, toggling }) {
+  const nc = rutina.archivado ? { strip: 'bg-gray-200', badge: 'bg-gray-100 text-gray-500' } : nivelColors(rutina.nivel)
+  const loadingToggle = toggling.has(rutina.id_rutina)
+
   return (
-    <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5 flex flex-col gap-3">
-      <div className="flex flex-col gap-1">
-        <p className="font-bold text-gray-800">{rutina.nombre}</p>
-        <p className="text-xs text-gray-500">Nivel: {rutina.nivel ?? '—'}</p>
-        <p className="text-xs text-gray-500">Objetivo: {rutina.objetivo ?? '—'}</p>
-        <p className="text-xs text-gray-400 mt-1 line-clamp-2">{rutina.descripcion}</p>
-      </div>
-      <div className="mt-auto">
-        <Button size="sm" onClick={() => onAsignar(rutina)}>Asignar</Button>
+    <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+      <div className={`h-1.5 ${nc.strip}`} />
+      <div className="p-5 flex flex-col gap-3 flex-1">
+
+        <div className="flex items-start justify-between gap-2">
+          <p className="font-bold text-gray-900 leading-snug">{rutina.nombre}</p>
+          <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${nc.badge}`}>
+            {rutina.archivado ? 'Archivada' : (rutina.nivel ?? '—')}
+          </span>
+        </div>
+
+        {rutina.objetivo && (
+          <span className="self-start text-xs font-medium bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md">
+            {rutina.objetivo}
+          </span>
+        )}
+
+        <p className={`text-xs text-gray-400 line-clamp-2 flex-1 ${rutina.archivado ? 'opacity-60' : ''}`}>
+          {rutina.descripcion}
+        </p>
+
+        {rutina.archivado ? (
+          <button
+            disabled={loadingToggle}
+            onClick={() => onToggle(rutina)}
+            className="mt-auto w-full flex items-center justify-center bg-green-100 text-green-700
+                       text-sm font-semibold py-2 rounded-xl hover:bg-green-200 transition-colors
+                       disabled:opacity-50"
+          >
+            {loadingToggle ? '…' : 'Activar'}
+          </button>
+        ) : (
+          <div className="mt-auto flex gap-2">
+            <button
+              onClick={() => onAsignar(rutina)}
+              className="flex-1 flex items-center justify-center bg-[#1D7FD8]/10 text-[#1D7FD8]
+                         text-sm font-semibold py-2 rounded-xl hover:bg-[#1D7FD8]/20 transition-colors"
+            >
+              Asignar
+            </button>
+            <button
+              disabled={loadingToggle}
+              onClick={() => onToggle(rutina)}
+              className="px-3 flex items-center justify-center bg-gray-100 text-gray-500
+                         text-sm font-semibold py-2 rounded-xl hover:bg-gray-200 transition-colors
+                         disabled:opacity-50"
+            >
+              {loadingToggle ? '…' : 'Archivar'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -161,30 +232,12 @@ function TabRutinas() {
   const [rutinas,        setRutinas]        = useState([])
   const [loadingRutinas, setLoadingRutinas] = useState(true)
   const [errorRutinas,   setErrorRutinas]   = useState('')
-
-  const [clientes,        setClientes]        = useState([])
-  const [loadingClientes, setLoadingClientes] = useState(false)
-
-  const [ejerciciosDisp, setEjerciciosDisp] = useState([])
-
-  const [busqueda,    setBusqueda]    = useState('')
-  const [filtroObj,   setFiltroObj]   = useState('')
-
-  const [modalCrear, setModalCrear] = useState(false)
-  const [formR,   setFormR]  = useState(emptyRutinaForm)
-  const [bloques, setBloques] = useState([newBloque()])
-  const [errorR,  setErrorR] = useState('')
-  const [savingR, setSavingR] = useState(false)
-
-  const [modalAsignar,    setModalAsignar]    = useState(false)
-  const [rutinaAsignar,   setRutinaAsignar]   = useState(null)
-  const [clienteId,       setClienteId]       = useState('')
-  const [fechaInicio,     setFechaInicio]     = useState('')
-  const [fechaFin,        setFechaFin]        = useState('')
-  const [bloquesAsignar,  setBloquesAsignar]  = useState([])
-  const [loadingBloques,  setLoadingBloques]  = useState(false)
-  const [errorA,          setErrorA]          = useState('')
-  const [savingA,         setSavingA]         = useState(false)
+  const [busqueda,       setBusqueda]       = useState('')
+  const [filtroObj,      setFiltroObj]      = useState('')
+  const [modalCrear,     setModalCrear]     = useState(false)
+  const [modalAsignar,   setModalAsignar]   = useState(false)
+  const [rutinaAsignar,  setRutinaAsignar]  = useState(null)
+  const [toggling,       setToggling]       = useState(new Set())
 
   async function cargarRutinas() {
     setLoadingRutinas(true)
@@ -199,158 +252,39 @@ function TabRutinas() {
     }
   }
 
-  async function cargarClientes() {
-    setLoadingClientes(true)
+  useEffect(() => { cargarRutinas() }, [])
+
+  async function handleToggle(rutina) {
+    const id = rutina.id_rutina
+    setToggling(prev => new Set([...prev, id]))
     try {
-      const data = await usersApi.getTrainerClients()
-      setClientes(data)
+      const updated = rutina.archivado
+        ? await routinesApi.unarchiveRoutine(id)
+        : await routinesApi.archiveRoutine(id)
+      setRutinas(prev => prev.map(r => r.id_rutina === id ? updated : r))
     } catch {
+      // silencioso — el estado local no cambia
     } finally {
-      setLoadingClientes(false)
+      setToggling(prev => { const s = new Set(prev); s.delete(id); return s })
     }
   }
-
-  useEffect(() => {
-    cargarRutinas()
-    cargarClientes()
-    exercisesApi.getExercises()
-      .then((data) => setEjerciciosDisp(data.filter((e) => !e.archivado)))
-      .catch(() => {})
-  }, [])
-
-  const clienteOptions = clientes.map((c) => ({
-    value: String(c.user.id_usuario),
-    label: `${c.user.nombre} ${c.user.apellidos}`,
-  }))
 
   const filtradas = rutinas.filter((r) =>
     r.nombre.toLowerCase().includes(busqueda.toLowerCase()) &&
     (!filtroObj || (r.objetivo ?? '').toLowerCase().includes(filtroObj.toLowerCase()))
   )
 
-  const ejercicioOptions = ejerciciosDisp.map((e) => ({ value: String(e.id_ejercicio), label: e.nombre }))
-
-  function setFieldR(k, v) { setFormR((p) => ({ ...p, [k]: v })) }
-
-  function addBloque() {
-    setBloques((prev) => [...prev, { dia: prev.length + 1, ejercicios: [newEj()] }])
-  }
-  function addEjercicio(bi) {
-    setBloques((prev) => prev.map((b, i) => i === bi ? { ...b, ejercicios: [...b.ejercicios, newEj()] } : b))
-  }
-  function updateEjercicio(bi, ei, campo, valor) {
-    setBloques((prev) => prev.map((b, i) =>
-      i === bi ? { ...b, ejercicios: b.ejercicios.map((e, j) => j === ei ? { ...e, [campo]: valor } : e) } : b
-    ))
-  }
-  function removeEjercicio(bi, ei) {
-    setBloques((prev) => prev.map((b, i) => i === bi ? { ...b, ejercicios: b.ejercicios.filter((_, j) => j !== ei) } : b))
-  }
-
-  function cerrarCrear() { setModalCrear(false); setFormR(emptyRutinaForm); setBloques([newBloque()]); setErrorR('') }
-
-  async function handleCrearRutina() {
-    if (!formR.nombre.trim()) { setErrorR('El nombre es obligatorio'); return }
-    setErrorR(''); setSavingR(true)
-    try {
-      const rutina = await routinesApi.createRoutine({
-        nombre:      formR.nombre,
-        objetivo:    formR.objetivo    || null,
-        nivel:       formR.nivel       || null,
-        descripcion: formR.descripcion || null,
-      })
-
-      for (let i = 0; i < bloques.length; i++) {
-        const block = await routinesApi.createBlock(rutina.id_rutina, { numero_dia: bloques[i].dia })
-        for (let j = 0; j < bloques[i].ejercicios.length; j++) {
-          const ej = bloques[i].ejercicios[j]
-          if (!ej.id_ejercicio) continue
-          await routinesApi.createBlockExercise(rutina.id_rutina, block.id_bloque_rutina, {
-            id_ejercicio: Number(ej.id_ejercicio),
-            orden:        j + 1,
-            series_plan:  Number(ej.series_plan) || 1,
-            reps_plan:    Number(ej.reps_plan)   || 1,
-            peso_obj:     ej.peso_obj !== '' ? Number(ej.peso_obj) : null,
-          })
-        }
-      }
-      cerrarCrear()
-      cargarRutinas()
-    } catch (err) { setErrorR(err.message || 'Error al crear la rutina') }
-    finally { setSavingR(false) }
-  }
-
-  async function abrirAsignar(rutina) {
+  function abrirAsignar(rutina) {
     setRutinaAsignar(rutina)
-    setClienteId('')
-    setFechaInicio('')
-    setFechaFin('')
-    setErrorA('')
-    setBloquesAsignar([])
     setModalAsignar(true)
-    setLoadingBloques(true)
-    try {
-      const bloques = await routinesApi.getBlocks(rutina.id_rutina)
-      const bloquesConEj = await Promise.all(
-        bloques.map(async (b) => {
-          const ejercicios = await routinesApi.getBlockExercises(rutina.id_rutina, b.id_bloque_rutina)
-          return {
-            ...b,
-            ejercicios: ejercicios.map((ej) => ({
-              ...ej,
-              override_series: '',
-              override_reps:   '',
-              override_peso:   '',
-            })),
-          }
-        })
-      )
-      setBloquesAsignar(bloquesConEj)
-    } catch {
-    } finally {
-      setLoadingBloques(false)
-    }
   }
-
-  function cerrarAsignar() { setModalAsignar(false); setRutinaAsignar(null); setBloquesAsignar([]) }
-
-  function updateOverride(bi, ei, campo, valor) {
-    setBloquesAsignar((prev) => prev.map((b, i) =>
-      i === bi ? { ...b, ejercicios: b.ejercicios.map((e, j) => j === ei ? { ...e, [campo]: valor } : e) } : b
-    ))
-  }
-
-  async function handleAsignar() {
-    if (!clienteId)   { setErrorA('Selecciona un cliente');       return }
-    if (!fechaInicio) { setErrorA('La fecha de inicio es obligatoria'); return }
-    if (!fechaFin)    { setErrorA('La fecha de fin es obligatoria');    return }
-    setErrorA(''); setSavingA(true)
-    try {
-      const asignacion = await assignmentsApi.createAssignment(clienteId, {
-        id_rutina:    rutinaAsignar.id_rutina,
-        fecha_inicio: fechaInicio,
-        fecha_fin:    fechaFin,
-      })
-      for (const bloque of bloquesAsignar) {
-        for (const ej of bloque.ejercicios) {
-          if (ej.override_series !== '' || ej.override_reps !== '' || ej.override_peso !== '') {
-            await assignmentsApi.createAssignmentExercise(asignacion.id_asignacion_rutina, {
-              id_bloque_rutina_ej: ej.id_bloque_rutina_ejercicio,
-              series_plan: ej.override_series !== '' ? Number(ej.override_series) : null,
-              reps_plan:   ej.override_reps   !== '' ? Number(ej.override_reps)   : null,
-              peso_obj:    ej.override_peso   !== '' ? Number(ej.override_peso)   : null,
-            })
-          }
-        }
-      }
-      cerrarAsignar()
-    } catch (err) { setErrorA(err.message || 'Error al asignar') }
-    finally { setSavingA(false) }
+  function cerrarAsignar() {
+    setModalAsignar(false)
+    setRutinaAsignar(null)
   }
 
   return (
     <>
-      {/* Filtros */}
       <div className="flex flex-wrap gap-3 items-end">
         <div className="flex-1 min-w-36">
           <Input placeholder="Nombre rutina" value={busqueda}  onChange={(e) => setBusqueda(e.target.value)} />
@@ -361,9 +295,15 @@ function TabRutinas() {
         <Button onClick={() => setModalCrear(true)}>Crear rutina</Button>
       </div>
 
-      {/* Grid de tarjetas */}
       <div className="mt-4">
-        <p className="text-sm font-semibold text-gray-700 mb-3">Rutinas</p>
+        <div className="flex items-center gap-2 mb-3">
+          <p className="text-sm font-semibold text-gray-700">Rutinas</p>
+          {!loadingRutinas && !errorRutinas && (
+            <span className="text-xs font-semibold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+              {filtradas.length}
+            </span>
+          )}
+        </div>
         {loadingRutinas ? (
           <div className="flex justify-center py-12">
             <span className="w-7 h-7 border-4 border-[#1D7FD8] border-t-transparent rounded-full animate-spin" />
@@ -371,196 +311,39 @@ function TabRutinas() {
         ) : errorRutinas ? (
           <p className="text-sm text-red-500 py-8 text-center">{errorRutinas}</p>
         ) : filtradas.length === 0 ? (
-          <p className="text-sm text-gray-400 py-8 text-center">No se encontraron rutinas</p>
+          <div className="flex flex-col items-center gap-2 py-16 text-gray-300">
+            <ClipboardList size={36} />
+            <p className="text-sm">No se encontraron rutinas</p>
+          </div>
         ) : (
           <div className="grid grid-cols-3 gap-4">
             {filtradas.map((r) => (
-              <RutinaCard key={r.id_rutina} rutina={r} onAsignar={abrirAsignar} />
+              <RutinaCard
+                key={r.id_rutina}
+                rutina={r}
+                onAsignar={abrirAsignar}
+                onToggle={handleToggle}
+                toggling={toggling}
+              />
             ))}
           </div>
         )}
       </div>
 
-      {/* Modal crear rutina */}
-      <Modal isOpen={modalCrear} onClose={cerrarCrear} title="Crear rutina">
-        <div className="flex flex-col gap-5">
-          {/* Datos generales */}
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Datos de la rutina</p>
-            <div className="flex flex-col gap-3">
-              <div className="flex gap-3">
-                <Input placeholder="Nombre de la rutina" value={formR.nombre}   onChange={(e) => setFieldR('nombre',   e.target.value)} error={errorR && !formR.nombre.trim() ? errorR : ''} />
-                <Input placeholder="Objetivo"            value={formR.objetivo} onChange={(e) => setFieldR('objetivo', e.target.value)} />
-                <Input type="select" placeholder="Nivel" value={formR.nivel}    onChange={(e) => setFieldR('nivel',    e.target.value)} options={NIVEL_OPTIONS} />
-              </div>
-              <Input type="textarea" placeholder="Descripción" value={formR.descripcion} onChange={(e) => setFieldR('descripcion', e.target.value)} />
-            </div>
-          </div>
-
-          {/* Bloques */}
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Ejercicios de la rutina</p>
-            <div className="flex flex-col gap-3">
-              {bloques.map((bloque, bi) => (
-                <div key={bi} className="bg-blue-50 rounded-xl p-3 flex flex-col gap-2">
-                  <p className="text-xs font-semibold text-[#1D7FD8]">Día {bloque.dia}</p>
-                  {bloque.ejercicios.map((ej, ei) => (
-                    <div key={ei} className="flex gap-2 items-center">
-                      <div className="flex-1">
-                        <Input
-                          type="select"
-                          placeholder="Selecciona ejercicio"
-                          value={ej.id_ejercicio}
-                          options={ejercicioOptions}
-                          onChange={(e) => updateEjercicio(bi, ei, 'id_ejercicio', e.target.value)}
-                        />
-                      </div>
-                      <div className="w-16">
-                        <Input
-                          type="number"
-                          placeholder="Series"
-                          value={ej.series_plan}
-                          onChange={(e) => updateEjercicio(bi, ei, 'series_plan', e.target.value)}
-                        />
-                      </div>
-                      <div className="w-16">
-                        <Input
-                          type="number"
-                          placeholder="Reps"
-                          value={ej.reps_plan}
-                          onChange={(e) => updateEjercicio(bi, ei, 'reps_plan', e.target.value)}
-                        />
-                      </div>
-                      <div className="w-20">
-                        <Input
-                          type="number"
-                          placeholder="Peso kg"
-                          value={ej.peso_obj}
-                          onChange={(e) => updateEjercicio(bi, ei, 'peso_obj', e.target.value)}
-                        />
-                      </div>
-                      {bloque.ejercicios.length > 1 && (
-                        <button onClick={() => removeEjercicio(bi, ei)} className="text-gray-400 hover:text-red-500 text-lg leading-none px-1">×</button>
-                      )}
-                    </div>
-                  ))}
-                  <button onClick={() => addEjercicio(bi)} className="text-xs text-[#1D7FD8] hover:underline self-start mt-1">
-                    + Añadir ejercicio
-                  </button>
-                </div>
-              ))}
-              <button onClick={addBloque} className="text-sm text-[#1D7FD8] hover:underline self-start">
-                + Añadir bloque
-              </button>
-            </div>
-          </div>
-
-          {errorR && formR.nombre.trim() && <p className="text-sm text-red-500">{errorR}</p>}
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={cerrarCrear}>Cancelar</Button>
-            <Button loading={savingR} onClick={handleCrearRutina}>Guardar</Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Modal asignar rutina */}
-      <Modal isOpen={modalAsignar} onClose={cerrarAsignar} title="Asignar rutina">
-        <div className="flex flex-col gap-5">
-          {rutinaAsignar && (
-            <div className="bg-blue-50 rounded-xl px-4 py-3">
-              <p className="font-semibold text-gray-800">{rutinaAsignar.nombre}</p>
-              {rutinaAsignar.nivel && <p className="text-xs text-gray-500 mt-0.5">Nivel: {rutinaAsignar.nivel}</p>}
-            </div>
-          )}
-
-          {/* Datos de la asignación */}
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Datos de la asignación</p>
-            <div className="flex flex-col gap-3">
-              <Input
-                type="select"
-                placeholder={loadingClientes ? 'Cargando clientes…' : 'Selecciona un cliente'}
-                value={clienteId}
-                onChange={(e) => setClienteId(e.target.value)}
-                options={clienteOptions}
-              />
-              <div className="flex gap-3">
-                <Input label="Fecha inicio" type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
-                <Input label="Fecha fin"    type="date" value={fechaFin}    onChange={(e) => setFechaFin(e.target.value)} />
-              </div>
-            </div>
-          </div>
-
-          {/* Personalización de ejercicios por cliente */}
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-              Personalización por cliente <span className="normal-case font-normal text-gray-400">(opcional — deja vacío para usar los valores de la rutina)</span>
-            </p>
-            {loadingBloques ? (
-              <div className="flex justify-center py-4">
-                <span className="w-6 h-6 border-4 border-[#1D7FD8] border-t-transparent rounded-full animate-spin" />
-              </div>
-            ) : bloquesAsignar.length === 0 ? (
-              <p className="text-sm text-gray-400">Esta rutina no tiene ejercicios definidos</p>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {bloquesAsignar.map((bloque, bi) => (
-                  <div key={bloque.id_bloque_rutina} className="bg-gray-50 rounded-xl p-3 flex flex-col gap-2">
-                    <p className="text-xs font-semibold text-[#1D7FD8]">
-                      Día {bloque.numero_dia}{bloque.nombre ? ` — ${bloque.nombre}` : ''}
-                    </p>
-                    {bloque.ejercicios.length === 0 ? (
-                      <p className="text-xs text-gray-400">Sin ejercicios en este bloque</p>
-                    ) : (
-                      bloque.ejercicios.map((ej, ei) => {
-                        const ejNombre = ejerciciosDisp.find((e) => e.id_ejercicio === ej.id_ejercicio)?.nombre ?? `Ejercicio ${ej.orden}`
-                        return (
-                          <div key={ej.id_bloque_rutina_ejercicio} className="flex gap-2 items-center">
-                            <span className="flex-1 text-sm text-gray-700 truncate">{ejNombre}</span>
-                            <div className="w-16">
-                              <Input
-                                type="number"
-                                placeholder={String(ej.series_plan)}
-                                value={ej.override_series}
-                                onChange={(e) => updateOverride(bi, ei, 'override_series', e.target.value)}
-                              />
-                            </div>
-                            <div className="w-16">
-                              <Input
-                                type="number"
-                                placeholder={String(ej.reps_plan)}
-                                value={ej.override_reps}
-                                onChange={(e) => updateOverride(bi, ei, 'override_reps', e.target.value)}
-                              />
-                            </div>
-                            <div className="w-20">
-                              <Input
-                                type="number"
-                                placeholder={ej.peso_obj != null ? String(ej.peso_obj) : 'Peso kg'}
-                                value={ej.override_peso}
-                                onChange={(e) => updateOverride(bi, ei, 'override_peso', e.target.value)}
-                              />
-                            </div>
-                          </div>
-                        )
-                      })
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {errorA && <p className="text-sm text-red-500">{errorA}</p>}
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={cerrarAsignar}>Cancelar</Button>
-            <Button loading={savingA} onClick={handleAsignar}>Guardar</Button>
-          </div>
-        </div>
-      </Modal>
+      <ModalCrearRutina
+        isOpen={modalCrear}
+        onClose={() => setModalCrear(false)}
+        onSuccess={cargarRutinas}
+      />
+      <ModalAsignarRutina
+        isOpen={modalAsignar}
+        onClose={cerrarAsignar}
+        rutina={rutinaAsignar}
+      />
     </>
   )
 }
+
 
 // ─────────────────────────────────────────────────────────────────
 // PESTAÑA MULTIMEDIA
@@ -576,28 +359,43 @@ const multimediaMock = [
 
 const emptyMediaForm = { nombre: '', url: '' }
 
+const TIPO_CONFIG = {
+  'Vídeo': { icon: Film,       bg: 'from-blue-50 to-blue-100',   badge: 'bg-blue-100 text-[#1D7FD8]'  },
+  'Foto':  { icon: ImageIcon,  bg: 'from-green-50 to-green-100', badge: 'bg-green-100 text-green-700' },
+}
+
+function tipoConfig(tipo) {
+  return TIPO_CONFIG[tipo] ?? { icon: Upload, bg: 'from-gray-50 to-gray-100', badge: 'bg-gray-100 text-gray-500' }
+}
+
 function MediaCard({ item }) {
+  const cfg = tipoConfig(item.tipo)
+  const Icon = cfg.icon
   return (
-    <div className="bg-gray-50 border border-gray-100 rounded-2xl overflow-hidden flex flex-col">
-      <div className="h-28 bg-gray-200 flex items-center justify-center">
-        <Upload size={28} className="text-gray-400" />
+    <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+      <div className={`h-32 bg-gradient-to-br ${cfg.bg} flex items-center justify-center relative`}>
+        <Icon size={36} className="text-gray-300" />
+        <span className={`absolute top-3 right-3 text-xs font-semibold px-2 py-0.5 rounded-full ${cfg.badge}`}>
+          {item.tipo}
+        </span>
       </div>
-      <div className="p-4 flex flex-col gap-1">
-        <p className="font-semibold text-sm text-gray-800">{item.nombre}</p>
-        <p className="text-xs text-gray-500">Tipo: {item.tipo}</p>
-        <p className="text-xs text-gray-500">Tamaño: {item.tamaño}</p>
-        <p className="text-xs text-gray-500">Asociado: {item.asociado}</p>
+      <div className="p-4 flex flex-col gap-1.5">
+        <p className="font-semibold text-sm text-gray-900 truncate">{item.nombre}</p>
+        <div className="flex items-center justify-between text-xs text-gray-400">
+          <span>{item.tamaño}</span>
+          <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md">{item.asociado}</span>
+        </div>
       </div>
     </div>
   )
 }
 
 function TabMultimedia() {
-  const [filtroTipo,  setFiltroTipo]  = useState('')
-  const [filtroEj,    setFiltroEj]    = useState('')
+  const [filtroTipo,   setFiltroTipo]   = useState('')
+  const [filtroEj,     setFiltroEj]     = useState('')
   const [modalAbierto, setModalAbierto] = useState(false)
-  const [form,  setForm]  = useState(emptyMediaForm)
-  const [error, setError] = useState('')
+  const [form,         setForm]         = useState(emptyMediaForm)
+  const [error,        setError]        = useState('')
 
   const filtrados = multimediaMock.filter((m) =>
     (!filtroTipo || m.tipo.toLowerCase().includes(filtroTipo.toLowerCase())) &&
@@ -616,20 +414,28 @@ function TabMultimedia() {
     <>
       <div className="flex flex-wrap gap-3 items-end">
         <div className="w-44">
-          <Input placeholder="Tipo de archivo" value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)} />
+          <Input placeholder="Tipo de archivo"    value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)} />
         </div>
         <div className="flex-1 min-w-36">
-          <Input placeholder="Ejercicio asociado" value={filtroEj} onChange={(e) => setFiltroEj(e.target.value)} />
+          <Input placeholder="Ejercicio asociado" value={filtroEj}   onChange={(e) => setFiltroEj(e.target.value)} />
         </div>
         <Button onClick={() => setModalAbierto(true)}>Subir archivo</Button>
       </div>
 
       <div className="mt-4">
-        <p className="text-sm font-semibold text-gray-700 mb-3">Contenido multimedia</p>
+        <div className="flex items-center gap-2 mb-3">
+          <p className="text-sm font-semibold text-gray-700">Contenido multimedia</p>
+          <span className="text-xs font-semibold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+            {filtrados.length}
+          </span>
+        </div>
         {filtrados.length === 0 ? (
-          <p className="text-sm text-gray-400 py-8 text-center">No se encontró contenido multimedia</p>
+          <div className="flex flex-col items-center gap-2 py-16 text-gray-300">
+            <Upload size={36} />
+            <p className="text-sm">No se encontró contenido multimedia</p>
+          </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             {filtrados.map((m) => <MediaCard key={m.id} item={m} />)}
           </div>
         )}
@@ -665,6 +471,7 @@ function TabMultimedia() {
   )
 }
 
+
 // ─────────────────────────────────────────────────────────────────
 // PÁGINA PRINCIPAL
 // ─────────────────────────────────────────────────────────────────
@@ -674,7 +481,7 @@ function ContenidoPage() {
 
   return (
     <div className="p-8 flex flex-col gap-6">
-      <h1 className="text-3xl font-black text-gray-900">Contenido</h1>
+      <h1 className="text-4xl font-black text-gray-900">Contenido</h1>
       <TabBar tabs={TABS} active={activeTab} onChange={setActiveTab} />
       <div>
         {activeTab === 'Ejercicios' && <TabEjercicios />}

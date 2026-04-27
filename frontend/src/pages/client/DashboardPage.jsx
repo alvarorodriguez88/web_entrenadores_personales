@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, ReferenceDot,
+  ReferenceDot,
 } from 'recharts'
-import Card          from '../../components/shared/Card'
-import Button        from '../../components/shared/Button'
+import Card           from '../../components/shared/Card'
+import Button         from '../../components/shared/Button'
 import EvolucionChart from '../../components/shared/EvolucionChart'
+import DonutChart     from '../../components/shared/DonutChart'
 import { metricsApi, analyticsApi, usersApi } from '../../services/api'
-
-const DONUT_COLORS = ['#1D7FD8', '#f97316', '#34d399', '#a78bfa', '#f87171', '#60a5fa']
 
 const OBJETIVO_CONFIG = {
   PERDER_PESO:         { unit: 'kg', color: '#f59e0b' },
@@ -88,6 +87,9 @@ function DashboardPage() {
   const totalEjercicios = distEjercicios.reduce((s, c) => s + c.cantidad, 0)
   const topCategoria    = distEjercicios[0] ?? null
   const donutData       = distEjercicios.map((c) => ({ name: c.categoria, value: c.porcentaje }))
+  const donutHighlight  = topCategoria
+    ? <><span className="font-bold">{topCategoria.categoria}</span> es tu categoría principal con un {topCategoria.porcentaje}% del total</>
+    : null
 
   // ── Evolución del peso ────────────────────────────────────────────
   const chartConfig = OBJETIVO_CONFIG[clientProfile?.objetivo] ?? DEFAULT_CONFIG
@@ -169,67 +171,12 @@ function DashboardPage() {
 
         {/* ── Tipo de ejercicios ── */}
         <Card title="Tipo de ejercicios">
-          {donutData.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-16">
-              Completa al menos una sesión para ver la distribución
-            </p>
-          ) : (
-            <>
-              <p className="text-sm text-gray-400 mb-4">
-                Últimas 8 semanas · {totalEjercicios} ejercicios totales
-              </p>
-              <div className="flex gap-4 items-center">
-                {/* Donut */}
-                <div className="w-44 h-44 shrink-0">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={donutData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={50}
-                        outerRadius={78}
-                        paddingAngle={3}
-                        dataKey="value"
-                      >
-                        {donutData.map((_, i) => (
-                          <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        formatter={(v, name) => [`${v}%`, name]}
-                        contentStyle={tooltipStyle}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                {/* Lista custom */}
-                <div className="flex-1 flex flex-col gap-2.5">
-                  {distEjercicios.map((cat, i) => (
-                    <div key={cat.categoria} className="flex flex-col gap-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-gray-800">{cat.categoria}</span>
-                        <span className="text-sm font-bold" style={{ color: DONUT_COLORS[i % DONUT_COLORS.length] }}>
-                          {cat.porcentaje}%
-                        </span>
-                      </div>
-                      <div className="h-1 rounded-full bg-gray-100 w-full">
-                        <div
-                          className="h-1 rounded-full"
-                          style={{ width: `${cat.porcentaje}%`, backgroundColor: DONUT_COLORS[i % DONUT_COLORS.length] }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              {topCategoria && (
-                <div className="mt-4 bg-blue-50 rounded-xl px-4 py-3 text-sm text-blue-800">
-                  <span className="font-bold">{topCategoria.categoria}</span> es tu categoría principal con un {topCategoria.porcentaje}% del total
-                </div>
-              )}
-            </>
-          )}
+          <DonutChart
+            data={donutData}
+            subtitle={`Últimas 8 semanas · ${totalEjercicios} ejercicios totales`}
+            highlightText={donutHighlight}
+            emptyMessage="Completa al menos una sesión para ver la distribución"
+          />
         </Card>
 
         {/* ── Evolución del peso ── */}

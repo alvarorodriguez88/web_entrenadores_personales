@@ -329,6 +329,10 @@ export const analyticsApi = {
     return request('/analytics/trainer/performance-distribution')
   },
 
+  getTrainerClientsList() {
+    return request('/analytics/trainer/clients/list')
+  },
+
   getTrainerClientsTable(periodo = 'semanal') {
     return request(`/analytics/trainer/clients/table?periodo=${periodo}`)
   },

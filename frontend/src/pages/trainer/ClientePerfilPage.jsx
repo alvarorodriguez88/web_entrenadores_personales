@@ -1,13 +1,24 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, User, ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { usersApi, metricsApi, analyticsApi, assignmentsApi, routinesApi } from '../../services/api'
 import Button        from '../../components/shared/Button'
 import Card          from '../../components/shared/Card'
+import PeriodoToggle from '../../components/shared/PeriodoToggle'
 import EvolucionChart from '../../components/shared/EvolucionChart'
 
 const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+
+const NIVEL_BADGE = {
+  PRINCIPIANTE: 'bg-green-100 text-green-700',
+  INTERMEDIO:   'bg-blue-100 text-[#1D7FD8]',
+  AVANZADO:     'bg-purple-100 text-purple-700',
+}
+
+function initials(nombre) {
+  return nombre.trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase()
+}
 
 function getDiasEntreno(bloques, anio, mes, fechaInicio, fechaFin) {
   const diasSemana = [...new Set(bloques.map((b) => b.numero_dia))]
@@ -204,13 +215,14 @@ function ClientePerfilPage() {
         Volver a clientes
       </button>
 
-      <h1 className="text-3xl font-black text-gray-900">Clientes</h1>
+      <h1 className="text-3xl font-black text-gray-900">{nombre}</h1>
 
       {/* Datos del cliente */}
       <Card>
         <div className="flex items-center gap-6">
-          <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center text-[#1D7FD8] flex-shrink-0">
-            <User size={24} />
+          <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center
+                          text-[#1D7FD8] text-lg font-black flex-shrink-0">
+            {initials(nombre)}
           </div>
 
           <div className="flex flex-col gap-0.5 min-w-0">
@@ -221,9 +233,15 @@ function ClientePerfilPage() {
           <div className="w-px h-10 bg-gray-200 mx-2 flex-shrink-0" />
 
           <div className="flex gap-8 flex-1">
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col gap-1">
               <p className="text-xs text-gray-400">Nivel</p>
-              <p className="text-sm font-semibold text-gray-700">{cliente.nivel ?? '—'}</p>
+              {cliente.nivel
+                ? <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold
+                    ${NIVEL_BADGE[(cliente.nivel ?? '').toUpperCase()] ?? 'bg-gray-100 text-gray-500'}`}>
+                    {cliente.nivel}
+                  </span>
+                : <span className="text-sm text-gray-300">—</span>
+              }
             </div>
             <div className="flex flex-col gap-0.5">
               <p className="text-xs text-gray-400">Objetivo</p>
@@ -250,9 +268,9 @@ function ClientePerfilPage() {
               { label: 'Altura',  value: ultimaMetrica.altura_cm  != null ? `${ultimaMetrica.altura_cm} cm` : '—' },
               { label: '% Grasa', value: ultimaMetrica.grasa_pct  != null ? `${ultimaMetrica.grasa_pct}%`   : '—' },
             ].map((m) => (
-              <div key={m.label} className="flex-1 flex flex-col items-center gap-1 px-4 py-2">
-                <p className="text-xl font-bold text-gray-800">{m.value}</p>
-                <p className="text-xs text-gray-500">{m.label}</p>
+              <div key={m.label} className="flex-1 flex flex-col items-center gap-1 px-4 py-4">
+                <p className="text-2xl font-black text-gray-900">{m.value}</p>
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mt-1">{m.label}</p>
               </div>
             ))}
           </div>
@@ -266,15 +284,7 @@ function ClientePerfilPage() {
       {/* Evolución individual */}
       <Card
         title="Evolución individual"
-        action={
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setPeriodo((p) => (p === 'semanal' ? 'mensual' : 'semanal'))}
-          >
-            {periodo === 'semanal' ? 'Semana' : 'Mes'}
-          </Button>
-        }
+        action={<PeriodoToggle value={periodo} onChange={setPeriodo} />}
       >
         {loadingEv ? (
           <div className="h-56 flex items-center justify-center">
@@ -358,28 +368,34 @@ function ClientePerfilPage() {
                     ) : (
                       <div className="flex flex-col gap-3">
                         {bloquesGest.map((bloque) => (
-                          <div key={bloque.id_bloque_rutina} className="bg-gray-50 rounded-xl p-3">
-                            <p className="text-xs font-semibold text-gray-600 mb-2">
-                              Día {bloque.numero_dia} — {DIAS_SEMANA[bloque.numero_dia - 1]}
-                              {bloque.nombre ? ` · ${bloque.nombre}` : ''}
-                            </p>
-                            {bloque.ejercicios.length === 0 ? (
-                              <p className="text-xs text-gray-400 italic">Sin ejercicios</p>
-                            ) : (
-                              <ul className="flex flex-col gap-1">
-                                {bloque.ejercicios.map((ej) => (
-                                  <li key={ej.id_bloque_rutina_ejercicio} className="text-sm text-gray-700 flex gap-2">
-                                    <span className="text-gray-400">·</span>
-                                    <span>
-                                      Ejercicio #{ej.id_ejercicio}
-                                      {ej.series_plan != null && <> · {ej.series_plan} series</>}
-                                      {ej.reps_plan   != null && <> · {ej.reps_plan} reps</>}
-                                      {ej.peso_obj    != null && <> · {ej.peso_obj} kg</>}
-                                    </span>
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
+                          <div key={bloque.id_bloque_rutina} className="bg-gray-50 rounded-xl p-3 flex gap-3">
+                            <div className="w-7 h-7 rounded-full bg-[#1D7FD8]/10 text-[#1D7FD8] text-xs font-bold
+                                            flex items-center justify-center shrink-0 mt-0.5">
+                              {bloque.numero_dia}
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-xs font-semibold text-gray-700 mb-2">
+                                {DIAS_SEMANA[bloque.numero_dia - 1]}
+                                {bloque.nombre ? ` · ${bloque.nombre}` : ''}
+                              </p>
+                              {bloque.ejercicios.length === 0 ? (
+                                <p className="text-xs text-gray-400 italic">Sin ejercicios</p>
+                              ) : (
+                                <ul className="flex flex-col gap-1">
+                                  {bloque.ejercicios.map((ej) => (
+                                    <li key={ej.id_bloque_rutina_ejercicio} className="text-sm text-gray-700 flex gap-2">
+                                      <span className="text-gray-400">·</span>
+                                      <span>
+                                        Ejercicio #{ej.id_ejercicio}
+                                        {ej.series_plan != null && <> · {ej.series_plan} series</>}
+                                        {ej.reps_plan   != null && <> · {ej.reps_plan} reps</>}
+                                        {ej.peso_obj    != null && <> · {ej.peso_obj} kg</>}
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>
