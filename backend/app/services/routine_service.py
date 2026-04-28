@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 from app.models.routine import Rutina, BloqueRutina, BloqueRutinaEjercicio
 from app.models.assignment import AsignacionRutina
 from app.models.exercise import Ejercicio
+from app.models.user import Cliente, Usuario
 from app.schemas.routine import (
     RoutineCreate, RoutineUpdate,
     BlockCreate, BlockUpdate,
@@ -21,6 +22,7 @@ def get_client_routines(db: Session, client_id: int) -> list[Rutina]:
     return db.query(Rutina).join(AsignacionRutina).filter(
         AsignacionRutina.estado == 'ACTIVA',
         AsignacionRutina.id_cliente == client_id,
+        Rutina.archivado == False,
     ).all()
 
 def get_routine_by_id(db: Session, routine_id: int, trainer_id: int) -> Rutina:
@@ -41,6 +43,7 @@ def get_client_routine(db: Session, routine_id: int, client_id: int) -> Rutina:
         Rutina.id_rutina == routine_id,
         AsignacionRutina.estado == 'ACTIVA',
         AsignacionRutina.id_cliente == client_id,
+        Rutina.archivado == False,
     ).first()
 
     if not routine:
@@ -220,8 +223,9 @@ def delete_block(db: Session, routine_id: int, block_id: int, trainer_id: int) -
 
 def get_block_exercises(db: Session, routine_id: int, block_id: int, trainer_id: int) -> list[BloqueRutinaEjercicio]:
     get_block_by_id(db, routine_id, block_id, trainer_id)
-    return db.query(BloqueRutinaEjercicio).filter(
-        BloqueRutinaEjercicio.id_bloque_rutina == block_id
+    return db.query(BloqueRutinaEjercicio).join(Ejercicio).filter(
+        BloqueRutinaEjercicio.id_bloque_rutina == block_id,
+        Ejercicio.archivado == False,
     ).order_by(BloqueRutinaEjercicio.orden).all()
 
 def get_block_exercise_by_id(db: Session, routine_id: int, block_id: int, block_exercise_id: int, trainer_id: int) -> BloqueRutinaEjercicio:
@@ -339,3 +343,25 @@ def reorder_block_exercises(db: Session, routine_id: int, block_id: int, data: R
 
     db.commit()
     return get_block_exercises(db, routine_id, block_id, trainer_id)
+
+def get_routine_assignments(db: Session, routine_id: int, trainer_id: int) -> list[dict]:
+    get_routine_by_id(db, routine_id, trainer_id)
+    rows = (
+        db.query(AsignacionRutina, Usuario.nombre, Usuario.apellidos)
+        .join(Cliente, Cliente.id_usuario == AsignacionRutina.id_cliente)
+        .join(Usuario, Usuario.id_usuario == Cliente.id_usuario)
+        .filter(AsignacionRutina.id_rutina == routine_id)
+        .all()
+    )
+    return [
+        {
+            "id_asignacion_rutina": asig.id_asignacion_rutina,
+            "id_cliente": asig.id_cliente,
+            "nombre": nombre,
+            "apellidos": apellidos,
+            "fecha_inicio": asig.fecha_inicio,
+            "fecha_fin": asig.fecha_fin,
+            "estado": asig.estado,
+        }
+        for asig, nombre, apellidos in rows
+    ]

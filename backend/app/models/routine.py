@@ -55,3 +55,7 @@ class BloqueRutinaEjercicio(Base):
     block = relationship("BloqueRutina", back_populates="block_exercises")
     exercise = relationship("Ejercicio", back_populates="routine_block_exercises")
     customizations = relationship("AsignacionEjercicio", back_populates="block_exercise", cascade="all, delete-orphan")
+
+    @property
+    def nombre_ejercicio(self):
+        return self.exercise.nombre if self.exercise else None

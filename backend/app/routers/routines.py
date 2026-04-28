@@ -8,7 +8,7 @@ from app.schemas.routine import (
     RoutineCreate, RoutineUpdate, RoutineResponse,
     BlockCreate, BlockUpdate, BlockResponse,
     BlockExerciseCreate, BlockExerciseUpdate, BlockExerciseResponse,
-    ReorderRequest
+    ReorderRequest, RoutineAssignmentClient
 )
 from app.services import routine_service
 
@@ -99,3 +99,7 @@ def delete_block_exercise(routine_id: int, block_id: int, block_exercise_id: int
 @router.patch("/{routine_id}/blocks/{block_id}/exercises/reorder", response_model=list[BlockExerciseResponse])
 def reorder_block_exercises(routine_id: int, block_id: int, data: ReorderRequest, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
     return routine_service.reorder_block_exercises(db, routine_id, block_id, data, trainer.id_usuario)
+
+@router.get("/{routine_id}/assignments", response_model=list[RoutineAssignmentClient])
+def list_routine_assignments(routine_id: int, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
+    return routine_service.get_routine_assignments(db, routine_id, trainer.id_usuario)

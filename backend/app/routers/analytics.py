@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from typing import Literal, Optional
+from typing import Literal
 
 from app.database import get_db
 from app.dependencies import get_current_trainer, get_current_client
@@ -61,7 +61,7 @@ def get_client_weekly_calendar(client: Cliente = Depends(get_current_client), db
     dias = analytics_service.get_client_weekly_calendar(db, client.id_usuario)
     return {"dias": dias}
 
-@router.get("/client/today-workout", response_model=Optional[TodayWorkoutResponse])
+@router.get("/client/today-workout", response_model=list[TodayWorkoutResponse])
 def get_client_today_workout(client: Cliente = Depends(get_current_client), db: Session = Depends(get_db)):
     return analytics_service.get_client_today_workout(db, client.id_usuario)
 

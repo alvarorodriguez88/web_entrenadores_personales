@@ -5,6 +5,7 @@ from app.database import get_db
 from app.dependencies import get_current_trainer
 from app.models.user import Entrenador
 from app.schemas.exercise import ExerciseCreate, ExerciseUpdate, ExerciseResponse, ExerciseCategoryCreate, CategoriaResponse
+from app.schemas.routine import RoutineResponse
 from app.services import exercise_service
 
 
@@ -43,6 +44,10 @@ def archive_exercise(exercise_id: int, trainer: Entrenador = Depends(get_current
 @router.patch("/{exercise_id}/unarchive", response_model=ExerciseResponse)
 def unarchive_exercise(exercise_id: int, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
     return exercise_service.unarchive_exercise(db, exercise_id, trainer.id_usuario)
+
+@router.get("/{exercise_id}/routines", response_model=list[RoutineResponse])
+def list_exercise_routines(exercise_id: int, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
+    return exercise_service.get_exercise_routines(db, exercise_id, trainer.id_usuario)
 
 @router.post("/{exercise_id}/categories", response_model=ExerciseResponse, status_code=status.HTTP_201_CREATED)
 def add_exercise_category(exercise_id: int, data: ExerciseCategoryCreate, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):

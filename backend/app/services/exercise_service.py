@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException, status
 
 from app.models.exercise import Ejercicio, Categoria, EjercicioCategoria
+from app.models.routine import Rutina, BloqueRutina, BloqueRutinaEjercicio
 from app.schemas.exercise import ExerciseCreate, ExerciseUpdate, ExerciseCategoryCreate
 
 
@@ -151,6 +152,20 @@ def add_exercise_category(db: Session, exercise_id: int, data: ExerciseCategoryC
     db.add(exercise_category)
     db.commit()
     return get_exercise_by_id(db, exercise_id, trainer_id)
+
+def get_exercise_routines(db: Session, exercise_id: int, trainer_id: int) -> list[Rutina]:
+    get_exercise_by_id(db, exercise_id, trainer_id)
+    return (
+        db.query(Rutina)
+        .join(BloqueRutina, BloqueRutina.id_rutina == Rutina.id_rutina)
+        .join(BloqueRutinaEjercicio, BloqueRutinaEjercicio.id_bloque_rutina == BloqueRutina.id_bloque_rutina)
+        .filter(
+            BloqueRutinaEjercicio.id_ejercicio == exercise_id,
+            Rutina.id_entrenador == trainer_id,
+        )
+        .distinct()
+        .all()
+    )
 
 def remove_exercise_category(db: Session, exercise_id: int, category_id: int, trainer_id: int) -> Ejercicio:
     get_exercise_by_id(db, exercise_id, trainer_id)
