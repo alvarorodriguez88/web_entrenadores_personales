@@ -112,6 +112,10 @@ export const exercisesApi = {
   unarchiveExercise(id) {
     return request(`/exercises/${id}/unarchive`, { method: 'PATCH' })
   },
+
+  getExerciseRoutines(id) {
+    return request(`/exercises/${id}/routines`)
+  },
 }
 
 
@@ -203,6 +207,10 @@ export const routinesApi = {
 
   reorderBlockExercises(routineId, blockId, data) {
     return request(`/routines/${routineId}/blocks/${blockId}/exercises/reorder`, { method: 'PATCH', body: data })
+  },
+
+  getRoutineAssignments(id) {
+    return request(`/routines/${id}/assignments`)
   },
 }
 

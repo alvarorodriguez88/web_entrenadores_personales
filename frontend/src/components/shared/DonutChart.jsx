@@ -17,6 +17,8 @@ function DonutChart({
   emptyMessage = 'Sin datos disponibles',
 }) {
   const palette = colors ?? DEFAULT_COLORS
+  const total = data.reduce((s, d) => s + (d.value ?? 0), 0)
+  const pct = (val) => total > 0 ? Math.round((val / total) * 100) : 0
 
   if (data.length === 0) {
     return (
@@ -32,7 +34,7 @@ function DonutChart({
 
       <div className="flex gap-4 items-center">
         {/* Donut */}
-        <div className="w-44 h-44 shrink-0">
+        <div className="w-52 h-52 shrink-0">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -52,7 +54,7 @@ function DonutChart({
                 ))}
               </Pie>
               <Tooltip
-                formatter={(v, name) => [`${v}%`, name]}
+                formatter={(v, name) => [`${pct(v)}%`, name]}
                 contentStyle={tooltipStyle}
               />
             </PieChart>
@@ -70,13 +72,13 @@ function DonutChart({
                     {item.name}
                   </span>
                   <span className="text-sm font-bold" style={{ color }}>
-                    {item.value}%
+                    {pct(item.value)}%
                   </span>
                 </div>
                 <div className="h-1 rounded-full bg-gray-100 w-full">
                   <div
                     className="h-1 rounded-full"
-                    style={{ width: `${item.value}%`, backgroundColor: color }}
+                    style={{ width: `${pct(item.value)}%`, backgroundColor: color }}
                   />
                 </div>
               </div>

@@ -60,8 +60,7 @@ function EjercicioCard({ ejercicio, index, onClick }) {
 }
 
 function EntrenamientoPage() {
-  const [workout,         setWorkout]         = useState(null)
-  const [noWorkout,       setNoWorkout]       = useState(false)
+  const [workouts,        setWorkouts]        = useState([])
   const [loading,         setLoading]         = useState(true)
   const [error,           setError]           = useState('')
   const [ejercicioActivo, setEjercicioActivo] = useState(null)
@@ -72,11 +71,7 @@ function EntrenamientoPage() {
       setError('')
       try {
         const data = await analyticsApi.getClientTodayWorkout()
-        if (data === null) {
-          setNoWorkout(true)
-        } else {
-          setWorkout(data)
-        }
+        setWorkouts(Array.isArray(data) ? data : [])
       } catch (err) {
         setError(err.message || 'Error al cargar el entrenamiento')
       } finally {
@@ -102,110 +97,111 @@ function EntrenamientoPage() {
     )
   }
 
-  // Cálculos de semana (solo si hay workout)
-  const today        = new Date()
-  const inicio       = workout ? new Date(workout.fecha_inicio) : null
-  const fin          = workout ? new Date(workout.fecha_fin)    : null
-  const totalSemanas = inicio && fin ? Math.max(1, Math.ceil((fin - inicio) / (7 * 86400000))) : 1
-  const semanaActual = inicio
-    ? Math.min(totalSemanas, Math.max(1, Math.ceil((today - inicio) / (7 * 86400000))))
-    : 1
-  const progresoPct  = Math.round((semanaActual / totalSemanas) * 100)
-
   return (
     <div className="p-8 flex flex-col gap-8">
 
       <h1 className="text-4xl font-black text-gray-900">Entrenamiento</h1>
 
-      {noWorkout ? (
+      {workouts.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-6 py-12 text-center">
-          <p className="text-sm text-gray-400">No tienes ninguna rutina asignada actualmente</p>
+          <p className="text-sm text-gray-400">No tienes entrenamiento para hoy</p>
         </div>
-      ) : workout && (
-        <>
-          {/* ── Card principal ── */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden border-l-4 border-l-[#1D7FD8]">
+      ) : workouts.map((workout, wi) => {
+        const today        = new Date()
+        const inicio       = workout.fecha_inicio ? new Date(workout.fecha_inicio) : null
+        const fin          = workout.fecha_fin    ? new Date(workout.fecha_fin)    : null
+        const totalSemanas = inicio && fin ? Math.max(1, Math.ceil((fin - inicio) / (7 * 86400000))) : 1
+        const semanaActual = inicio
+          ? Math.min(totalSemanas, Math.max(1, Math.ceil((today - inicio) / (7 * 86400000))))
+          : 1
+        const progresoPct = Math.round((semanaActual / totalSemanas) * 100)
 
-            {/* Zona superior */}
-            <div className="px-6 pt-5 pb-4 flex items-start justify-between gap-4">
+        return (
+          <div key={wi} className="flex flex-col gap-4">
+            {/* ── Card principal ── */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden border-l-4 border-l-[#1D7FD8]">
 
-              {/* Izquierda: nombre rutina + bloque·día·notas */}
-              <div className="flex flex-col gap-1.5 flex-1 min-w-0">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <h2 className="text-xl font-bold text-gray-900 leading-tight">{workout.nombre_rutina}</h2>
-                  {workout.nivel_rutina && (
-                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">
-                      {workout.nivel_rutina.toUpperCase()}
-                    </span>
-                  )}
+              {/* Zona superior */}
+              <div className="px-6 pt-5 pb-4 flex items-start justify-between gap-4">
+
+                {/* Izquierda: nombre rutina + bloque·día·notas */}
+                <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <h2 className="text-xl font-bold text-gray-900 leading-tight">{workout.nombre_rutina}</h2>
+                    {workout.nivel_rutina && (
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">
+                        {workout.nivel_rutina.toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-700 flex items-center gap-1.5 flex-wrap">
+                    <span className="font-semibold">{workout.nombre_bloque ?? `Bloque ${workout.numero_dia}`}</span>
+                    <span className="text-gray-300">·</span>
+                    <span className="text-gray-500">Día {workout.numero_dia}</span>
+                    {workout.notas_bloque && (
+                      <>
+                        <span className="text-gray-300">·</span>
+                        <span className="text-[#1D7FD8]">{workout.notas_bloque}</span>
+                      </>
+                    )}
+                  </p>
                 </div>
-                <p className="text-sm text-gray-700 flex items-center gap-1.5 flex-wrap">
-                  <span className="font-semibold">{workout.nombre_bloque ?? `Bloque ${workout.numero_dia}`}</span>
-                  <span className="text-gray-300">·</span>
-                  <span className="text-gray-500">Día {workout.numero_dia}</span>
-                  {workout.notas_bloque && (
-                    <>
-                      <span className="text-gray-300">·</span>
-                      <span className="text-[#1D7FD8]">{workout.notas_bloque}</span>
-                    </>
-                  )}
-                </p>
+
+                {/* Derecha: semana + barra de progreso */}
+                <div className="flex flex-col items-end gap-2 shrink-0 min-w-[140px]">
+                  <p className="text-sm text-gray-500">
+                    Semana <strong className="text-gray-900">{semanaActual}</strong> de {totalSemanas}
+                  </p>
+                  <div className="h-1.5 rounded-full bg-gray-100 w-full">
+                    <div className="h-1.5 rounded-full bg-[#1D7FD8]" style={{ width: `${progresoPct}%` }} />
+                  </div>
+                </div>
               </div>
 
-              {/* Derecha: semana + barra de progreso */}
-              <div className="flex flex-col items-end gap-2 shrink-0 min-w-[140px]">
+              <hr className="border-gray-100" />
+
+              {/* Zona inferior: objetivo + botón */}
+              <div className="px-6 py-4 flex items-center justify-between gap-4">
                 <p className="text-sm text-gray-500">
-                  Semana <strong className="text-gray-900">{semanaActual}</strong> de {totalSemanas}
+                  {workout.ejercicios?.length ?? 0} ejercicios
+                  {workout.objetivo_rutina && ` · ${workout.objetivo_rutina}`}
                 </p>
-                <div className="h-1.5 rounded-full bg-gray-100 w-full">
-                  <div className="h-1.5 rounded-full bg-[#1D7FD8]" style={{ width: `${progresoPct}%` }} />
+                <button className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1D7FD8] text-white text-sm font-semibold hover:bg-[#1a6fc0] transition-colors shrink-0">
+                  <Play size={14} fill="white" strokeWidth={0} />
+                  Comenzar sesión
+                </button>
+              </div>
+            </div>
+
+            {/* ── Ejercicios del día ── */}
+            <section className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Ejercicios del día</h2>
+                <span className="text-xs text-gray-400">
+                  {workout.ejercicios?.length ?? 0} ejercicios · toca para ver detalles
+                </span>
+              </div>
+
+              {!workout.ejercicios?.length ? (
+                <div className="bg-white rounded-2xl border border-gray-100 px-6 py-10 text-center">
+                  <p className="text-sm text-gray-400">Este bloque no tiene ejercicios configurados</p>
                 </div>
-              </div>
-            </div>
-
-            <hr className="border-gray-100" />
-
-            {/* Zona inferior: objetivo + botón */}
-            <div className="px-6 py-4 flex items-center justify-between gap-4">
-              <p className="text-sm text-gray-500">
-                {workout.ejercicios?.length ?? 0} ejercicios
-                {workout.objetivo_rutina && ` · ${workout.objetivo_rutina}`}
-              </p>
-              <button className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1D7FD8] text-white text-sm font-semibold hover:bg-[#1a6fc0] transition-colors shrink-0">
-                <Play size={14} fill="white" strokeWidth={0} />
-                Comenzar sesión
-              </button>
-            </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {workout.ejercicios.map((ej, i) => (
+                    <EjercicioCard
+                      key={ej.id_ejercicio}
+                      ejercicio={ej}
+                      index={i}
+                      onClick={() => setEjercicioActivo(ej)}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
           </div>
-
-          {/* ── Ejercicios del día ── */}
-          <section className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Ejercicios del día</h2>
-              <span className="text-xs text-gray-400">
-                {workout.ejercicios?.length ?? 0} ejercicios · toca para ver detalles
-              </span>
-            </div>
-
-            {!workout.ejercicios?.length ? (
-              <div className="bg-white rounded-2xl border border-gray-100 px-6 py-10 text-center">
-                <p className="text-sm text-gray-400">Este bloque no tiene ejercicios configurados</p>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {workout.ejercicios.map((ej, i) => (
-                  <EjercicioCard
-                    key={ej.id_ejercicio}
-                    ejercicio={ej}
-                    index={i}
-                    onClick={() => setEjercicioActivo(ej)}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-        </>
-      )}
+        )
+      })}
 
       {/* ── Modal detalle ejercicio ── */}
       <Modal

@@ -175,7 +175,7 @@ function InicioPage() {
                     <span className="text-xs text-gray-400">{formatFechaCorta(a.fecha_hora)}</span>
                     {a.nota_rendimiento != null && (
                       <span className="text-xs font-bold bg-blue-100 text-[#1D7FD8] px-2 py-0.5 rounded-lg">
-                        RPE {Math.round(a.nota_rendimiento)}
+                        Rendimiento: {Math.round(a.nota_rendimiento)}
                       </span>
                     )}
                   </div>

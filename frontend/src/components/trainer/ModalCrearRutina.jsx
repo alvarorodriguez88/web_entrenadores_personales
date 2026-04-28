@@ -1,8 +1,25 @@
 import { useState, useEffect } from 'react'
-import Modal  from '../shared/Modal'
-import Input  from '../shared/Input'
-import Button from '../shared/Button'
+import { X } from 'lucide-react'
 import { exercisesApi, routinesApi } from '../../services/api'
+
+const DIA_CONFIG = {
+  1: { abrev: 'Lu', nombre: 'Lunes',     color: '#1D7FD8', bg: '#EFF6FF', border: '#BFDBFE' },
+  2: { abrev: 'Ma', nombre: 'Martes',    color: '#16a34a', bg: '#F0FDF4', border: '#BBF7D0' },
+  3: { abrev: 'Mi', nombre: 'Miércoles', color: '#0891b2', bg: '#ECFEFF', border: '#A5F3FC' },
+  4: { abrev: 'Ju', nombre: 'Jueves',    color: '#7c3aed', bg: '#F5F3FF', border: '#DDD6FE' },
+  5: { abrev: 'Vi', nombre: 'Viernes',   color: '#ea580c', bg: '#FFF7ED', border: '#FED7AA' },
+  6: { abrev: 'Sá', nombre: 'Sábado',    color: '#db2777', bg: '#FDF2F8', border: '#FBCFE8' },
+  7: { abrev: 'Do', nombre: 'Domingo',   color: '#64748b', bg: '#F8FAFC', border: '#E2E8F0' },
+}
+
+const OBJETIVO_OPTIONS = [
+  { value: 'Hipertrofia',    label: 'Hipertrofia'    },
+  { value: 'Fuerza',         label: 'Fuerza'         },
+  { value: 'Pérdida de peso',label: 'Pérdida de peso'},
+  { value: 'Resistencia',    label: 'Resistencia'    },
+  { value: 'Flexibilidad',   label: 'Flexibilidad'   },
+  { value: 'Mantenimiento',  label: 'Mantenimiento'  },
+]
 
 const NIVEL_OPTIONS = [
   { value: 'PRINCIPIANTE', label: 'Principiante' },
@@ -10,16 +27,23 @@ const NIVEL_OPTIONS = [
   { value: 'AVANZADO',     label: 'Avanzado'     },
 ]
 
-const emptyForm   = { nombre: '', objetivo: '', nivel: '', descripcion: '' }
-const newEj       = () => ({ id_ejercicio: '', series_plan: 3, reps_plan: 10, peso_obj: '' })
-const newBloque   = () => ({ dia: 1, ejercicios: [newEj()] })
+const emptyForm    = { nombre: '', objetivo: '', nivel: '', descripcion: '' }
+const newEjercicio = () => ({ id_ejercicio: '', series_plan: 3, reps_plan: 10, peso_obj: '' })
+const newBloque    = () => ({ nombre: '', ejercicios: [newEjercicio()] })
+
+const inputCls = `
+  w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800
+  placeholder:text-gray-400 outline-none transition-colors
+  focus:border-[#1D7FD8] focus:ring-1 focus:ring-[#1D7FD8]/20
+`
 
 function ModalCrearRutina({ isOpen, onClose, onSuccess }) {
-  const [form,           setForm]           = useState(emptyForm)
-  const [bloques,        setBloques]        = useState([newBloque()])
-  const [ejerciciosDisp, setEjerciciosDisp] = useState([])
-  const [error,          setError]          = useState('')
-  const [saving,         setSaving]         = useState(false)
+  const [form,            setForm]            = useState(emptyForm)
+  const [diasSeleccionados, setDiasSeleccionados] = useState(new Set())
+  const [bloquesPorDia,   setBloquesPorDia]   = useState({})
+  const [ejerciciosDisp,  setEjerciciosDisp]  = useState([])
+  const [error,           setError]           = useState('')
+  const [saving,          setSaving]          = useState(false)
 
   useEffect(() => {
     if (!isOpen) return
@@ -28,31 +52,76 @@ function ModalCrearRutina({ isOpen, onClose, onSuccess }) {
       .catch(() => {})
   }, [isOpen])
 
-  const ejercicioOptions = ejerciciosDisp.map((e) => ({ value: String(e.id_ejercicio), label: e.nombre }))
+  const ejercicioOptions = ejerciciosDisp.map((e) => ({
+    value: String(e.id_ejercicio),
+    label: e.nombre,
+  }))
 
-  function setFieldR(k, v) { setForm((p) => ({ ...p, [k]: v })) }
+  // Counters for subtitle
+  const totalDias       = diasSeleccionados.size
+  const totalEjercicios = Object.values(bloquesPorDia).reduce(
+    (sum, b) => sum + b.ejercicios.filter((e) => e.id_ejercicio).length,
+    0
+  )
 
-  function addBloque() {
-    setBloques((prev) => [...prev, { dia: prev.length + 1, ejercicios: [newEj()] }])
-  }
-  function addEjercicio(bi) {
-    setBloques((prev) => prev.map((b, i) => i === bi ? { ...b, ejercicios: [...b.ejercicios, newEj()] } : b))
-  }
-  function updateEjercicio(bi, ei, campo, valor) {
-    setBloques((prev) => prev.map((b, i) =>
-      i === bi ? { ...b, ejercicios: b.ejercicios.map((e, j) => j === ei ? { ...e, [campo]: valor } : e) } : b
-    ))
-  }
-  function removeEjercicio(bi, ei) {
-    setBloques((prev) => prev.map((b, i) =>
-      i === bi ? { ...b, ejercicios: b.ejercicios.filter((_, j) => j !== ei) } : b
-    ))
+  function setField(k, v) { setForm((p) => ({ ...p, [k]: v })) }
+
+  function toggleDia(dia) {
+    setDiasSeleccionados((prev) => {
+      const next = new Set(prev)
+      if (next.has(dia)) {
+        next.delete(dia)
+        setBloquesPorDia((p) => { const q = { ...p }; delete q[dia]; return q })
+      } else {
+        next.add(dia)
+        setBloquesPorDia((p) => ({ ...p, [dia]: newBloque() }))
+      }
+      return next
+    })
   }
 
-  function cerrar() { onClose(); setForm(emptyForm); setBloques([newBloque()]); setError('') }
+  function setBloqueName(dia, nombre) {
+    setBloquesPorDia((p) => ({ ...p, [dia]: { ...p[dia], nombre } }))
+  }
 
-  async function handleCrearRutina() {
+  function addEjercicio(dia) {
+    setBloquesPorDia((p) => ({
+      ...p,
+      [dia]: { ...p[dia], ejercicios: [...p[dia].ejercicios, newEjercicio()] },
+    }))
+  }
+
+  function updateEjercicio(dia, ei, campo, valor) {
+    setBloquesPorDia((p) => ({
+      ...p,
+      [dia]: {
+        ...p[dia],
+        ejercicios: p[dia].ejercicios.map((e, j) => j === ei ? { ...e, [campo]: valor } : e),
+      },
+    }))
+  }
+
+  function removeEjercicio(dia, ei) {
+    setBloquesPorDia((p) => ({
+      ...p,
+      [dia]: {
+        ...p[dia],
+        ejercicios: p[dia].ejercicios.filter((_, j) => j !== ei),
+      },
+    }))
+  }
+
+  function cerrar() {
+    onClose()
+    setForm(emptyForm)
+    setDiasSeleccionados(new Set())
+    setBloquesPorDia({})
+    setError('')
+  }
+
+  async function handleGuardar() {
     if (!form.nombre.trim()) { setError('El nombre es obligatorio'); return }
+    if (diasSeleccionados.size === 0) { setError('Selecciona al menos un día de entrenamiento'); return }
     setError(''); setSaving(true)
     try {
       const rutina = await routinesApi.createRoutine({
@@ -61,11 +130,15 @@ function ModalCrearRutina({ isOpen, onClose, onSuccess }) {
         nivel:       form.nivel       || null,
         descripcion: form.descripcion || null,
       })
-
-      for (let i = 0; i < bloques.length; i++) {
-        const block = await routinesApi.createBlock(rutina.id_rutina, { numero_dia: bloques[i].dia })
-        for (let j = 0; j < bloques[i].ejercicios.length; j++) {
-          const ej = bloques[i].ejercicios[j]
+      for (const dia of [1, 2, 3, 4, 5, 6, 7]) {
+        if (!diasSeleccionados.has(dia)) continue
+        const bloque = bloquesPorDia[dia]
+        const block = await routinesApi.createBlock(rutina.id_rutina, {
+          numero_dia: dia,
+          nombre:     bloque.nombre || null,
+        })
+        for (let j = 0; j < bloque.ejercicios.length; j++) {
+          const ej = bloque.ejercicios[j]
           if (!ej.id_ejercicio) continue
           await routinesApi.createBlockExercise(rutina.id_rutina, block.id_bloque_rutina, {
             id_ejercicio: Number(ej.id_ejercicio),
@@ -85,83 +158,258 @@ function ModalCrearRutina({ isOpen, onClose, onSuccess }) {
     }
   }
 
-  return (
-    <Modal isOpen={isOpen} onClose={cerrar} title="Crear rutina">
-      <div className="flex flex-col gap-5">
+  if (!isOpen) return null
 
-        {/* Datos generales */}
-        <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Datos de la rutina</p>
-          <div className="flex flex-col gap-3">
-            <div className="flex gap-3">
-              <Input
-                placeholder="Nombre de la rutina"
-                value={form.nombre}
-                onChange={(e) => setFieldR('nombre', e.target.value)}
-                error={error && !form.nombre.trim() ? error : ''}
-              />
-              <Input placeholder="Objetivo" value={form.objetivo} onChange={(e) => setFieldR('objetivo', e.target.value)} />
-              <Input type="select" placeholder="Nivel" value={form.nivel} onChange={(e) => setFieldR('nivel', e.target.value)} options={NIVEL_OPTIONS} />
-            </div>
-            <Input type="textarea" placeholder="Descripción" value={form.descripcion} onChange={(e) => setFieldR('descripcion', e.target.value)} />
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
+      onClick={cerrar}
+    >
+      <div
+        className="relative w-full max-w-2xl max-h-[90vh] flex flex-col bg-white rounded-2xl shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* ── Cabecera ── */}
+        <div className="flex items-start justify-between px-6 py-5 border-b border-gray-100 shrink-0">
+          <div className="flex flex-col gap-0.5">
+            <h2 className="text-xl font-black text-gray-900">Crear rutina</h2>
+            <p className="text-sm text-gray-400">
+              {totalDias} {totalDias === 1 ? 'día' : 'días'} · {totalEjercicios} {totalEjercicios === 1 ? 'ejercicio asignado' : 'ejercicios asignados'}
+            </p>
           </div>
+          <button
+            onClick={cerrar}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+          >
+            <X size={18} />
+          </button>
         </div>
 
-        {/* Bloques */}
-        <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Ejercicios de la rutina</p>
-          <div className="flex flex-col gap-3">
-            {bloques.map((bloque, bi) => (
-              <div key={bi} className="bg-blue-50 rounded-xl p-3 flex flex-col gap-2">
-                <p className="text-xs font-semibold text-[#1D7FD8]">Día {bloque.dia}</p>
-                {bloque.ejercicios.map((ej, ei) => (
-                  <div key={ei} className="flex gap-2 items-center">
-                    <div className="flex-1">
-                      <Input
-                        type="select"
-                        placeholder="Selecciona ejercicio"
-                        value={ej.id_ejercicio}
-                        options={ejercicioOptions}
-                        onChange={(e) => updateEjercicio(bi, ei, 'id_ejercicio', e.target.value)}
-                      />
-                    </div>
-                    <div className="w-16">
-                      <Input type="number" placeholder="Series" value={ej.series_plan}
-                        onChange={(e) => updateEjercicio(bi, ei, 'series_plan', e.target.value)} />
-                    </div>
-                    <div className="w-16">
-                      <Input type="number" placeholder="Reps" value={ej.reps_plan}
-                        onChange={(e) => updateEjercicio(bi, ei, 'reps_plan', e.target.value)} />
-                    </div>
-                    <div className="w-20">
-                      <Input type="number" placeholder="Peso kg" value={ej.peso_obj}
-                        onChange={(e) => updateEjercicio(bi, ei, 'peso_obj', e.target.value)} />
-                    </div>
-                    {bloque.ejercicios.length > 1 && (
-                      <button onClick={() => removeEjercicio(bi, ei)}
-                        className="text-gray-400 hover:text-red-500 text-lg leading-none px-1">×</button>
-                    )}
-                  </div>
-                ))}
-                <button onClick={() => addEjercicio(bi)}
-                  className="text-xs text-[#1D7FD8] hover:underline self-start mt-1">
-                  + Añadir ejercicio
-                </button>
+        {/* ── Body scrollable ── */}
+        <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-6">
+
+          {/* Datos de la rutina */}
+          <section className="flex flex-col gap-4">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Datos de la rutina</p>
+
+            {/* Fila: Nombre · Objetivo · Nivel */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Nombre</label>
+                <input
+                  className={inputCls}
+                  placeholder="p. ej. Fuerza Base 3 días"
+                  value={form.nombre}
+                  onChange={(e) => setField('nombre', e.target.value)}
+                />
               </div>
-            ))}
-            <button onClick={addBloque} className="text-sm text-[#1D7FD8] hover:underline self-start">
-              + Añadir bloque
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Objetivo</label>
+                <select
+                  className={`${inputCls} cursor-pointer`}
+                  value={form.objetivo}
+                  onChange={(e) => setField('objetivo', e.target.value)}
+                >
+                  <option value="">Objetivo</option>
+                  {OBJETIVO_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Nivel</label>
+                <select
+                  className={`${inputCls} cursor-pointer`}
+                  value={form.nivel}
+                  onChange={(e) => setField('nivel', e.target.value)}
+                >
+                  <option value="">Nivel</option>
+                  {NIVEL_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Descripción */}
+            <textarea
+              className={`${inputCls} resize-none`}
+              rows={3}
+              placeholder="Descripción de la rutina (opcional)..."
+              value={form.descripcion}
+              onChange={(e) => setField('descripcion', e.target.value)}
+            />
+          </section>
+
+          {/* Días de entrenamiento */}
+          <section className="flex flex-col gap-3">
+            <div className="flex flex-col gap-0.5">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Días de entrenamiento</p>
+              <p className="text-sm text-gray-400">Selecciona los días en los que se entrena esta rutina</p>
+            </div>
+
+            {/* Botones de día */}
+            <div className="grid grid-cols-7 gap-2">
+              {[1, 2, 3, 4, 5, 6, 7].map((dia) => {
+                const cfg       = DIA_CONFIG[dia]
+                const selected  = diasSeleccionados.has(dia)
+                return (
+                  <button
+                    key={dia}
+                    onClick={() => toggleDia(dia)}
+                    className="flex flex-col items-center justify-center py-3 rounded-xl transition-all"
+                    style={selected ? {
+                      border:          `2px solid ${cfg.color}`,
+                      backgroundColor: cfg.bg,
+                      color:           cfg.color,
+                    } : {
+                      border:          '1px solid #E5E7EB',
+                      backgroundColor: '#FFFFFF',
+                      color:           '#9CA3AF',
+                    }}
+                  >
+                    <span className="text-sm font-bold">{cfg.abrev}</span>
+                    <span
+                      className="mt-1 w-1.5 h-1.5 rounded-full"
+                      style={{ backgroundColor: selected ? cfg.color : 'transparent' }}
+                    />
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+
+          {/* Tarjetas de bloque (una por día seleccionado, ordenadas) */}
+          {[1, 2, 3, 4, 5, 6, 7].filter((d) => diasSeleccionados.has(d)).map((dia) => {
+            const cfg    = DIA_CONFIG[dia]
+            const bloque = bloquesPorDia[dia]
+            if (!bloque) return null
+            return (
+              <div
+                key={dia}
+                className="rounded-xl overflow-hidden flex-shrink-0"
+                style={{ border: `1px solid ${cfg.border}`, backgroundColor: cfg.bg }}
+              >
+                {/* Cabecera del bloque */}
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <span
+                    className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+                    style={{ backgroundColor: cfg.color }}
+                  >
+                    {cfg.abrev}
+                  </span>
+                  <span className="font-semibold text-gray-800">{cfg.nombre}</span>
+                  <input
+                    className="ml-auto flex-1 max-w-[240px] bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 placeholder:text-gray-400 outline-none focus:border-[#1D7FD8] transition-colors"
+                    placeholder="Nombre del bloque (opcional)"
+                    value={bloque.nombre}
+                    onChange={(e) => setBloqueName(dia, e.target.value)}
+                  />
+                  <button
+                    onClick={() => toggleDia(dia)}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-white/60 transition-colors shrink-0"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+
+                {/* Tabla de ejercicios */}
+                <div className="bg-white px-4 pb-4">
+                  {/* Cabecera tabla */}
+                  <div className="grid gap-2 mb-2 pt-3 border-t border-gray-100"
+                    style={{ gridTemplateColumns: '1fr 80px 80px 96px 24px' }}>
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Ejercicio</span>
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Series</span>
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Reps</span>
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Peso (kg)</span>
+                    <span />
+                  </div>
+
+                  {/* Filas */}
+                  <div className="flex flex-col gap-2">
+                    {bloque.ejercicios.map((ej, ei) => (
+                      <div key={ei} className="grid gap-2 items-center"
+                        style={{ gridTemplateColumns: '1fr 80px 80px 96px 24px' }}>
+                        <select
+                          className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-[#1D7FD8] transition-colors cursor-pointer"
+                          value={ej.id_ejercicio}
+                          onChange={(e) => updateEjercicio(dia, ei, 'id_ejercicio', e.target.value)}
+                        >
+                          <option value="">Selecciona ejercicio</option>
+                          {ejercicioOptions.map((o) => (
+                            <option key={o.value} value={o.value}>{o.label}</option>
+                          ))}
+                        </select>
+                        <input
+                          type="number"
+                          min="1"
+                          className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 text-center outline-none focus:border-[#1D7FD8] transition-colors"
+                          value={ej.series_plan}
+                          onChange={(e) => updateEjercicio(dia, ei, 'series_plan', e.target.value)}
+                        />
+                        <input
+                          type="number"
+                          min="1"
+                          className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 text-center outline-none focus:border-[#1D7FD8] transition-colors"
+                          value={ej.reps_plan}
+                          onChange={(e) => updateEjercicio(dia, ei, 'reps_plan', e.target.value)}
+                        />
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.5"
+                          className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 text-center outline-none focus:border-[#1D7FD8] transition-colors"
+                          placeholder="—"
+                          value={ej.peso_obj}
+                          onChange={(e) => updateEjercicio(dia, ei, 'peso_obj', e.target.value)}
+                        />
+                        <button
+                          onClick={() => removeEjercicio(dia, ei)}
+                          disabled={bloque.ejercicios.length === 1}
+                          className="flex items-center justify-center text-gray-300 hover:text-gray-500 disabled:opacity-0 disabled:pointer-events-none transition-colors"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => addEjercicio(dia)}
+                    className="mt-3 text-sm font-semibold text-[#1D7FD8] hover:underline"
+                    style={{ color: cfg.color }}
+                  >
+                    + Añadir ejercicio
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* ── Footer ── */}
+        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between gap-4 shrink-0">
+          {error ? (
+            <p className="text-sm text-red-500">{error}</p>
+          ) : <span />}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={cerrar}
+              className="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleGuardar}
+              disabled={saving}
+              className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-[#1D7FD8] hover:bg-[#1a6fc0] disabled:opacity-60 transition-colors"
+            >
+              {saving ? 'Guardando…' : 'Guardar rutina'}
             </button>
           </div>
         </div>
-
-        {error && form.nombre.trim() && <p className="text-sm text-red-500">{error}</p>}
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={cerrar}>Cancelar</Button>
-          <Button loading={saving} onClick={handleCrearRutina}>Guardar</Button>
-        </div>
       </div>
-    </Modal>
+    </div>
   )
 }
 

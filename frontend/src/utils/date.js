@@ -8,3 +8,9 @@ export function formatDateTime(isoString) {
   const mins  = String(d.getMinutes()).padStart(2, '0')
   return `${day}/${month}/${year} · ${hours}:${mins}`
 }
+
+export function formatShortDate(isoString) {
+  if (!isoString) return '—'
+  const d = new Date(isoString)
+  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+}

@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Upload, Dumbbell, ClipboardList, Film, Image as ImageIcon } from 'lucide-react'
+import { Upload, Dumbbell, ClipboardList, Film, Image as ImageIcon, Archive, ArchiveRestore } from 'lucide-react'
 import { exercisesApi, routinesApi } from '../../services/api'
 import TabBar              from '../../components/shared/TabBar'
 import Table               from '../../components/shared/Table'
 import Modal               from '../../components/shared/Modal'
 import Button              from '../../components/shared/Button'
 import Input               from '../../components/shared/Input'
-import ModalCrearEjercicio from '../../components/trainer/ModalCrearEjercicio'
-import ModalCrearRutina    from '../../components/trainer/ModalCrearRutina'
-import ModalAsignarRutina  from '../../components/trainer/ModalAsignarRutina'
+import ModalCrearEjercicio    from '../../components/trainer/ModalCrearEjercicio'
+import ModalDetalleEjercicio  from '../../components/trainer/ModalDetalleEjercicio'
+import ModalCrearRutina       from '../../components/trainer/ModalCrearRutina'
+import ModalDetalleRutina     from '../../components/trainer/ModalDetalleRutina'
+import ModalAsignarRutina     from '../../components/trainer/ModalAsignarRutina'
 
 const TABS = ['Ejercicios', 'Rutinas', 'Multimedia']
 
@@ -24,8 +26,9 @@ function TabEjercicios() {
   const [busqueda,     setBusqueda]     = useState('')
   const [filtroGrupo,  setFiltroGrupo]  = useState('')
   const [filtroEquip,  setFiltroEquip]  = useState('')
-  const [modalEj,      setModalEj]      = useState(false)
-  const [toggling,     setToggling]     = useState(new Set())
+  const [modalEj,           setModalEj]           = useState(false)
+  const [selectedEjercicio, setSelectedEjercicio] = useState(null)
+  const [toggling,          setToggling]          = useState(new Set())
 
   async function cargarEjercicios() {
     setLoadingEj(true)
@@ -72,8 +75,8 @@ function TabEjercicios() {
       label: 'Estado',
       render: (v) => (
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
-          ${v ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-700'}`}>
-          {v ? 'Archivado' : 'Activo'}
+          ${v ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
+          {v ? 'Inactivo' : 'Activo'}
         </span>
       ),
     },
@@ -82,16 +85,18 @@ function TabEjercicios() {
       label: '',
       render: (_, row) => {
         const loading = toggling.has(row.id_ejercicio)
+        const Icon = row.archivado ? ArchiveRestore : Archive
         return (
           <button
             disabled={loading}
+            title={row.archivado ? 'Activar' : 'Archivar'}
             onClick={(e) => { e.stopPropagation(); handleToggle(row) }}
-            className={`text-xs font-semibold px-3 py-1 rounded-lg transition-colors disabled:opacity-50
+            className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors disabled:opacity-50
               ${row.archivado
                 ? 'bg-green-100 text-green-700 hover:bg-green-200'
                 : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
           >
-            {loading ? '…' : row.archivado ? 'Activar' : 'Archivar'}
+            {loading ? '…' : <Icon size={15} />}
           </button>
         )
       },
@@ -140,7 +145,7 @@ function TabEjercicios() {
             <p className="text-sm">No se encontraron ejercicios</p>
           </div>
         ) : (
-          <Table columns={columnas} data={filtrados} />
+          <Table columns={columnas} data={filtrados} onRowClick={setSelectedEjercicio} />
         )}
       </div>
 
@@ -148,6 +153,11 @@ function TabEjercicios() {
         isOpen={modalEj}
         onClose={() => setModalEj(false)}
         onSuccess={cargarEjercicios}
+      />
+      <ModalDetalleEjercicio
+        isOpen={!!selectedEjercicio}
+        onClose={() => setSelectedEjercicio(null)}
+        ejercicio={selectedEjercicio}
       />
     </>
   )
@@ -167,12 +177,15 @@ function nivelColors(nivel) {
   return NIVEL_COLOR[(nivel ?? '').toUpperCase()] ?? { strip: 'bg-gray-200', badge: 'bg-gray-100 text-gray-500' }
 }
 
-function RutinaCard({ rutina, onAsignar, onToggle, toggling }) {
+function RutinaCard({ rutina, onAsignar, onToggle, onDetalle, toggling }) {
   const nc = rutina.archivado ? { strip: 'bg-gray-200', badge: 'bg-gray-100 text-gray-500' } : nivelColors(rutina.nivel)
   const loadingToggle = toggling.has(rutina.id_rutina)
 
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+    <div
+      onClick={() => onDetalle(rutina)}
+      className="bg-white border border-gray-100 rounded-2xl overflow-hidden flex flex-col hover:shadow-md transition-shadow cursor-pointer"
+    >
       <div className={`h-1.5 ${nc.strip}`} />
       <div className="p-5 flex flex-col gap-3 flex-1">
 
@@ -196,7 +209,7 @@ function RutinaCard({ rutina, onAsignar, onToggle, toggling }) {
         {rutina.archivado ? (
           <button
             disabled={loadingToggle}
-            onClick={() => onToggle(rutina)}
+            onClick={(e) => { e.stopPropagation(); onToggle(rutina) }}
             className="mt-auto w-full flex items-center justify-center bg-green-100 text-green-700
                        text-sm font-semibold py-2 rounded-xl hover:bg-green-200 transition-colors
                        disabled:opacity-50"
@@ -206,7 +219,7 @@ function RutinaCard({ rutina, onAsignar, onToggle, toggling }) {
         ) : (
           <div className="mt-auto flex gap-2">
             <button
-              onClick={() => onAsignar(rutina)}
+              onClick={(e) => { e.stopPropagation(); onAsignar(rutina) }}
               className="flex-1 flex items-center justify-center bg-[#1D7FD8]/10 text-[#1D7FD8]
                          text-sm font-semibold py-2 rounded-xl hover:bg-[#1D7FD8]/20 transition-colors"
             >
@@ -214,7 +227,7 @@ function RutinaCard({ rutina, onAsignar, onToggle, toggling }) {
             </button>
             <button
               disabled={loadingToggle}
-              onClick={() => onToggle(rutina)}
+              onClick={(e) => { e.stopPropagation(); onToggle(rutina) }}
               className="px-3 flex items-center justify-center bg-gray-100 text-gray-500
                          text-sm font-semibold py-2 rounded-xl hover:bg-gray-200 transition-colors
                          disabled:opacity-50"
@@ -230,6 +243,7 @@ function RutinaCard({ rutina, onAsignar, onToggle, toggling }) {
 
 function TabRutinas() {
   const [rutinas,        setRutinas]        = useState([])
+  const [ejercicios,     setEjercicios]     = useState([])
   const [loadingRutinas, setLoadingRutinas] = useState(true)
   const [errorRutinas,   setErrorRutinas]   = useState('')
   const [busqueda,       setBusqueda]       = useState('')
@@ -237,6 +251,7 @@ function TabRutinas() {
   const [modalCrear,     setModalCrear]     = useState(false)
   const [modalAsignar,   setModalAsignar]   = useState(false)
   const [rutinaAsignar,  setRutinaAsignar]  = useState(null)
+  const [selectedRutina, setSelectedRutina] = useState(null)
   const [toggling,       setToggling]       = useState(new Set())
 
   async function cargarRutinas() {
@@ -252,7 +267,10 @@ function TabRutinas() {
     }
   }
 
-  useEffect(() => { cargarRutinas() }, [])
+  useEffect(() => {
+    cargarRutinas()
+    exercisesApi.getExercises().then(setEjercicios).catch(() => {})
+  }, [])
 
   async function handleToggle(rutina) {
     const id = rutina.id_rutina
@@ -273,6 +291,8 @@ function TabRutinas() {
     r.nombre.toLowerCase().includes(busqueda.toLowerCase()) &&
     (!filtroObj || (r.objetivo ?? '').toLowerCase().includes(filtroObj.toLowerCase()))
   )
+  const activas    = filtradas.filter((r) => !r.archivado)
+  const archivadas = filtradas.filter((r) =>  r.archivado)
 
   function abrirAsignar(rutina) {
     setRutinaAsignar(rutina)
@@ -295,37 +315,66 @@ function TabRutinas() {
         <Button onClick={() => setModalCrear(true)}>Crear rutina</Button>
       </div>
 
-      <div className="mt-4">
-        <div className="flex items-center gap-2 mb-3">
-          <p className="text-sm font-semibold text-gray-700">Rutinas</p>
-          {!loadingRutinas && !errorRutinas && (
-            <span className="text-xs font-semibold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-              {filtradas.length}
-            </span>
+      <div className="mt-4 flex flex-col gap-8">
+        {/* Rutinas activas */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <p className="text-sm font-semibold text-gray-700">Rutinas</p>
+            {!loadingRutinas && !errorRutinas && (
+              <span className="text-xs font-semibold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                {activas.length}
+              </span>
+            )}
+          </div>
+          {loadingRutinas ? (
+            <div className="flex justify-center py-12">
+              <span className="w-7 h-7 border-4 border-[#1D7FD8] border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : errorRutinas ? (
+            <p className="text-sm text-red-500 py-8 text-center">{errorRutinas}</p>
+          ) : activas.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-12 text-gray-300">
+              <ClipboardList size={36} />
+              <p className="text-sm">No se encontraron rutinas activas</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-4">
+              {activas.map((r) => (
+                <RutinaCard
+                  key={r.id_rutina}
+                  rutina={r}
+                  onAsignar={abrirAsignar}
+                  onToggle={handleToggle}
+                  onDetalle={setSelectedRutina}
+                  toggling={toggling}
+                />
+              ))}
+            </div>
           )}
         </div>
-        {loadingRutinas ? (
-          <div className="flex justify-center py-12">
-            <span className="w-7 h-7 border-4 border-[#1D7FD8] border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : errorRutinas ? (
-          <p className="text-sm text-red-500 py-8 text-center">{errorRutinas}</p>
-        ) : filtradas.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-16 text-gray-300">
-            <ClipboardList size={36} />
-            <p className="text-sm">No se encontraron rutinas</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-3 gap-4">
-            {filtradas.map((r) => (
-              <RutinaCard
-                key={r.id_rutina}
-                rutina={r}
-                onAsignar={abrirAsignar}
-                onToggle={handleToggle}
-                toggling={toggling}
-              />
-            ))}
+
+        {/* Rutinas archivadas */}
+        {!loadingRutinas && !errorRutinas && archivadas.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <Archive size={14} className="text-gray-400" />
+              <p className="text-sm font-semibold text-gray-400">Archivadas</p>
+              <span className="text-xs font-semibold bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full">
+                {archivadas.length}
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              {archivadas.map((r) => (
+                <RutinaCard
+                  key={r.id_rutina}
+                  rutina={r}
+                  onAsignar={abrirAsignar}
+                  onToggle={handleToggle}
+                  onDetalle={setSelectedRutina}
+                  toggling={toggling}
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -339,6 +388,13 @@ function TabRutinas() {
         isOpen={modalAsignar}
         onClose={cerrarAsignar}
         rutina={rutinaAsignar}
+      />
+      <ModalDetalleRutina
+        isOpen={!!selectedRutina}
+        onClose={() => setSelectedRutina(null)}
+        rutina={selectedRutina}
+        ejercicios={ejercicios}
+        onSuccess={() => { setSelectedRutina(null); cargarRutinas() }}
       />
     </>
   )
