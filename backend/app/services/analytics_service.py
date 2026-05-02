@@ -546,17 +546,32 @@ def get_client_today_workout(db: Session, client_id: int) -> list[dict]:
                 "orden":          bre.orden,
             })
 
+        sesion_hoy = db.query(SesionRutina).filter(
+            SesionRutina.id_asignacion == assignment.id_asignacion_rutina,
+            SesionRutina.id_bloque_rutina == block.id_bloque_rutina,
+            func.date(SesionRutina.fecha_hora) == today,
+        ).first()
+
         result.append({
-            "nombre_rutina":      routine.nombre,
-            "nivel_rutina":       routine.nivel,
-            "objetivo_rutina":    routine.objetivo,
-            "descripcion_rutina": routine.descripcion,
-            "nombre_bloque":      block.nombre,
-            "numero_dia":         block.numero_dia,
-            "notas_bloque":       block.notas,
-            "fecha_inicio":       assignment.fecha_inicio,
-            "fecha_fin":          assignment.fecha_fin,
-            "ejercicios":         exercises_result,
+            "id_asignacion_rutina": assignment.id_asignacion_rutina,
+            "id_bloque_rutina":     block.id_bloque_rutina,
+            "nombre_rutina":        routine.nombre,
+            "nivel_rutina":         routine.nivel,
+            "objetivo_rutina":      routine.objetivo,
+            "descripcion_rutina":   routine.descripcion,
+            "nombre_bloque":        block.nombre,
+            "numero_dia":           block.numero_dia,
+            "notas_bloque":         block.notas,
+            "fecha_inicio":         assignment.fecha_inicio,
+            "fecha_fin":            assignment.fecha_fin,
+            "ejercicios":           exercises_result,
+            "sesion_hoy": {
+                "id_sesion_rutina": sesion_hoy.id_sesion_rutina,
+                "duracion_min":     sesion_hoy.duracion_min,
+                "esfuerzo_rpe":     sesion_hoy.esfuerzo_rpe,
+                "conformidad":      sesion_hoy.conformidad,
+                "nota_rendimiento": float(sesion_hoy.nota_rendimiento) if sesion_hoy.nota_rendimiento else None,
+            } if sesion_hoy else None,
         })
 
     return result

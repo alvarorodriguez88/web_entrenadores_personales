@@ -97,17 +97,27 @@ class TodayBlockExerciseResponse(BaseModel):
     notas:          Optional[str] = None
     orden:          int
 
+class SesionHoyResponse(BaseModel):
+    id_sesion_rutina: int
+    duracion_min:     Optional[int]   = None
+    esfuerzo_rpe:     int
+    conformidad:      Optional[int]   = None
+    nota_rendimiento: Optional[float] = None
+
 class TodayWorkoutResponse(BaseModel):
-    nombre_rutina:      str
-    nivel_rutina:       Optional[str] = None
-    objetivo_rutina:    Optional[str] = None
-    descripcion_rutina: Optional[str] = None
-    nombre_bloque:      Optional[str] = None
-    numero_dia:         int
-    notas_bloque:       Optional[str] = None
-    fecha_inicio:       Optional[date] = None
-    fecha_fin:          Optional[date] = None
-    ejercicios:         list[TodayBlockExerciseResponse] = []
+    id_asignacion_rutina: int
+    id_bloque_rutina:     int
+    nombre_rutina:        str
+    nivel_rutina:         Optional[str] = None
+    objetivo_rutina:      Optional[str] = None
+    descripcion_rutina:   Optional[str] = None
+    nombre_bloque:        Optional[str] = None
+    numero_dia:           int
+    notas_bloque:         Optional[str] = None
+    fecha_inicio:         Optional[date] = None
+    fecha_fin:            Optional[date] = None
+    ejercicios:           list[TodayBlockExerciseResponse] = []
+    sesion_hoy:           Optional[SesionHoyResponse] = None
 
 class ClientRecentActivityItemResponse(BaseModel):
     fecha_hora: datetime

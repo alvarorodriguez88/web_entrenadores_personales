@@ -281,6 +281,12 @@ def create_exercise_log(db: Session, session_id: int, data: ExerciseLogCreate, c
     db.add(log)
     db.commit()
     db.refresh(log)
+
+    session = db.query(SesionRutina).filter(SesionRutina.id_sesion_rutina == session_id).first()
+    if session:
+        session.nota_rendimiento = _calculate_session_performance(db, session)
+        db.commit()
+
     return log
 
 def update_exercise_log(db: Session, log_id: int, data: ExerciseLogUpdate, client_id: int) -> EjercicioRealizado:
