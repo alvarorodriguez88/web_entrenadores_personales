@@ -40,6 +40,7 @@ def get_assignment_history(db: Session, trainer_id: int) -> list[AsignacionRutin
 
 def get_client_assignments_trainer(db: Session, client_id: int, trainer_id: int) -> list[AsignacionRutina]:
     _verify_client_belongs_to_trainer(db, client_id, trainer_id)
+    auto_finalize_expired(db, client_id)
     today = date.today()
     return db.query(AsignacionRutina).join(Rutina).filter(
         AsignacionRutina.id_cliente == client_id,
@@ -50,6 +51,7 @@ def get_client_assignments_trainer(db: Session, client_id: int, trainer_id: int)
     ).order_by(AsignacionRutina.fecha_inicio.desc()).all()
 
 def get_client_assignments_client(db: Session, client_id: int) -> list[AsignacionRutina]:
+    auto_finalize_expired(db, client_id)
     return db.query(AsignacionRutina).join(Rutina).filter(
         AsignacionRutina.id_cliente == client_id,
         AsignacionRutina.estado == "ACTIVA",
