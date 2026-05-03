@@ -1,4 +1,6 @@
+from datetime import date
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from fastapi import HTTPException, status
 
 from app.models.assignment import AsignacionRutina, SesionRutina, EjercicioRealizado, AsignacionEjercicio
@@ -13,6 +15,18 @@ from app.schemas.assignment import (
 from app.services.user_service import update_client_nivel_if_needed
 
 
+def auto_finalize_expired(db: Session, client_id: int) -> None:
+    today = date.today()
+    expired = db.query(AsignacionRutina).filter(
+        AsignacionRutina.id_cliente == client_id,
+        AsignacionRutina.estado == "ACTIVA",
+        AsignacionRutina.fecha_fin < today,
+    ).all()
+    for a in expired:
+        a.estado = "FINALIZADA"
+    if expired:
+        db.commit()
+
 def get_assignments(db: Session, trainer_id: int) -> list[AsignacionRutina]:
     return db.query(AsignacionRutina).join(Cliente).filter(
         Cliente.id_entrenador == trainer_id,
@@ -26,15 +40,22 @@ def get_assignment_history(db: Session, trainer_id: int) -> list[AsignacionRutin
 
 def get_client_assignments_trainer(db: Session, client_id: int, trainer_id: int) -> list[AsignacionRutina]:
     _verify_client_belongs_to_trainer(db, client_id, trainer_id)
-    return db.query(AsignacionRutina).filter(
+    auto_finalize_expired(db, client_id)
+    today = date.today()
+    return db.query(AsignacionRutina).join(Rutina).filter(
         AsignacionRutina.id_cliente == client_id,
-        AsignacionRutina.estado == "ACTIVA"
-    ).all()
+        AsignacionRutina.estado == "ACTIVA",
+        Rutina.archivado == False,
+        or_(AsignacionRutina.fecha_inicio == None, AsignacionRutina.fecha_inicio <= today),
+        or_(AsignacionRutina.fecha_fin   == None, AsignacionRutina.fecha_fin   >= today),
+    ).order_by(AsignacionRutina.fecha_inicio.desc()).all()
 
 def get_client_assignments_client(db: Session, client_id: int) -> list[AsignacionRutina]:
-    return db.query(AsignacionRutina).filter(
+    auto_finalize_expired(db, client_id)
+    return db.query(AsignacionRutina).join(Rutina).filter(
         AsignacionRutina.id_cliente == client_id,
-        AsignacionRutina.estado == "ACTIVA"
+        AsignacionRutina.estado == "ACTIVA",
+        Rutina.archivado == False,
     ).all()
 
 def get_client_assignment_history(db: Session, client_id: int, trainer_id: int) -> list[AsignacionRutina]:
@@ -102,6 +123,8 @@ def update_assignment_status(db: Session, assignment_id: int, data: AssignmentSt
 
 def update_assignment(db: Session, assignment_id: int, data, trainer_id: int) -> AsignacionRutina:
     assignment = get_assignment_by_id(db, assignment_id, trainer_id)
+    if data.fecha_inicio is not None:
+        assignment.fecha_inicio = data.fecha_inicio
     if data.fecha_fin is not None:
         assignment.fecha_fin = data.fecha_fin
     if data.notas is not None:
@@ -260,6 +283,12 @@ def create_exercise_log(db: Session, session_id: int, data: ExerciseLogCreate, c
     db.add(log)
     db.commit()
     db.refresh(log)
+
+    session = db.query(SesionRutina).filter(SesionRutina.id_sesion_rutina == session_id).first()
+    if session:
+        session.nota_rendimiento = _calculate_session_performance(db, session)
+        db.commit()
+
     return log
 
 def update_exercise_log(db: Session, log_id: int, data: ExerciseLogUpdate, client_id: int) -> EjercicioRealizado:

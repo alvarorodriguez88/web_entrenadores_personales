@@ -1,76 +1,101 @@
 import { useState, useEffect } from 'react'
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
-} from 'recharts'
-import KPICard from '../../components/shared/KPICard'
-import Card   from '../../components/shared/Card'
-import { metricsApi } from '../../services/api'
+import Card                   from '../../components/shared/Card'
+import Button                 from '../../components/shared/Button'
+import EvolucionChart         from '../../components/shared/EvolucionChart'
+import DonutChart             from '../../components/shared/DonutChart'
+import MetricasEvolucionChart from '../../components/shared/MetricasEvolucionChart'
+import { metricsApi, analyticsApi, usersApi } from '../../services/api'
 
-// TODO: sustituir por GET /api/v1/assignments/me — cumplimiento y sesiones
-const kpisMock = [
-  { title: 'Sesiones completadas', value: '18',   trend: '+3 este mes',   positive: true  },
-  { title: 'Cumplimiento semanal', value: '85%',  trend: '+12% vs semana anterior', positive: true  },
-  { title: 'Peso actual (kg)',      value: '78,4', trend: '−1,2 kg este mes',        positive: true  },
-  { title: 'Progreso general',      value: '72%',  trend: '+8% vs inicio',           positive: true  },
-]
-
-// TODO: sustituir por GET /api/v1/assignments/me/sessions — cumplimiento semanal real
-const evolucionData = [
-  { semana: 'S1', rendimiento: 55 },
-  { semana: 'S2', rendimiento: 60 },
-  { semana: 'S3', rendimiento: 50 },
-  { semana: 'S4', rendimiento: 70 },
-  { semana: 'S5', rendimiento: 75 },
-  { semana: 'S6', rendimiento: 68 },
-  { semana: 'S7', rendimiento: 85 },
-]
-
-// TODO: sustituir por GET /api/v1/assignments/me — tipo de ejercicios de la rutina activa
-const tipoEjerciciosData = [
-  { name: 'Fuerza',     value: 45 },
-  { name: 'Cardio',     value: 25 },
-  { name: 'Movilidad',  value: 20 },
-  { name: 'Core',       value: 10 },
-]
-const DONUT_COLORS = ['#1D7FD8', '#34d399', '#f59e0b', '#a78bfa']
-
-const tooltipStyle = {
-  borderRadius: '12px',
-  border: 'none',
-  boxShadow: '0 4px 12px rgba(0,0,0,0.10)',
-  fontSize: '12px',
+const OBJETIVO_METRICA_CONFIG = {
+  PERDER_PESO:         { titulo: 'Pérdida de peso',     mostrar: ['peso', 'grasa'] },
+  GANAR_MASA:          { titulo: 'Ganancia muscular',   mostrar: ['peso', 'grasa'] },
+  MEJORAR_FUERZA:      { titulo: 'Seguimiento de peso', mostrar: ['peso']          },
+  MEJORAR_RESISTENCIA: { titulo: 'Seguimiento de peso', mostrar: ['peso']          },
+  MANTENIMIENTO:       { titulo: 'Control de peso',     mostrar: ['peso']          },
 }
+const DEFAULT_METRICA_CONFIG = { titulo: 'Composición corporal', mostrar: ['peso', 'grasa'] }
 
 function DashboardPage() {
-  const [metricas, setMetricas] = useState([])
-  const [loading,  setLoading]  = useState(true)
-  const [error,    setError]    = useState('')
+  const [loadingEv,      setLoadingEv]      = useState(false)
+  const [periodo,        setPeriodo]        = useState('semanal')
+  const [evolucion,      setEvolucion]      = useState([])
+  const [metricas,       setMetricas]       = useState([])
+  const [distEjercicios, setDistEjercicios] = useState([])
+  const [clientProfile,  setClientProfile]  = useState(null)
+  const [loading,        setLoading]        = useState(true)
+  const [error,          setError]          = useState('')
 
   useEffect(() => {
-    async function cargarMetricas() {
+    async function cargarDatos() {
       setLoading(true)
       setError('')
       try {
-        const data = await metricsApi.getMyMetrics()
-        setMetricas(data)
+        const [metricsData, distData, profileData] = await Promise.all([
+          metricsApi.getMyMetrics(),
+          analyticsApi.getClientExerciseDistribution(),
+          usersApi.getClientProfile(),
+        ])
+        setMetricas(metricsData)
+        setDistEjercicios(distData?.categorias ?? [])
+        setClientProfile(profileData)
       } catch (err) {
         setError(err.message || 'Error al cargar las métricas')
       } finally {
         setLoading(false)
       }
     }
-    cargarMetricas()
+    cargarDatos()
   }, [])
 
-  // Ordenar por fecha y mapear para el gráfico de peso
-  const pesoData = [...metricas]
-    .sort((a, b) => (a.fecha > b.fecha ? 1 : -1))
-    .filter((m) => m.peso_kg != null)
-    .map((m) => ({
-      mes:  new Date(m.fecha).toLocaleDateString('es-ES', { month: 'short', year: '2-digit' }),
-      peso: m.peso_kg,
-    }))
+  useEffect(() => {
+    async function cargarEvolucion() {
+      setLoadingEv(true)
+      try {
+        const data = await analyticsApi.getClientEvolution(periodo)
+        const serie = Array.isArray(data)
+          ? data
+          : (data?.puntos ?? data?.serie ?? data?.historico ?? data?.items ?? [])
+        setEvolucion(serie)
+      } catch {
+        setEvolucion([])
+      } finally {
+        setLoadingEv(false)
+      }
+    }
+    cargarEvolucion()
+  }, [periodo])
+
+  // ── Evolución individual ──────────────────────────────────────────
+  const mejorPunto = evolucion.length > 0
+    ? evolucion.reduce((best, p) => p.conformidad > best.conformidad ? p : best)
+    : null
+  const mejorFechaLabel = mejorPunto?.fecha
+    ? mejorPunto.fecha.split('-').slice(1).reverse().join('/')
+    : null
+
+  // ── Tipo de ejercicios ────────────────────────────────────────────
+  const totalEjercicios = distEjercicios.reduce((s, c) => s + c.cantidad, 0)
+  const topCategoria    = distEjercicios[0] ?? null
+  const donutData       = distEjercicios.map((c) => ({ name: c.categoria, value: c.porcentaje }))
+  const donutHighlight  = topCategoria
+    ? <><span className="font-bold">{topCategoria.categoria}</span> es tu categoría principal con un {topCategoria.porcentaje}% del total</>
+    : null
+
+  // ── Composición corporal ─────────────────────────────────────────
+  const metricasOrdenadas = [...metricas]
+    .sort((a, b) => (a.fecha_registro ?? a.fecha) > (b.fecha_registro ?? b.fecha) ? 1 : -1)
+
+  const metricasChartData = metricasOrdenadas.map((m) => {
+    const d = new Date(m.fecha_registro ?? m.fecha)
+    return {
+      fecha: `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`,
+      peso:  m.peso_kg  != null ? Number(m.peso_kg)  : null,
+      grasa: m.grasa_pct != null ? Number(m.grasa_pct) : null,
+    }
+  })
+
+  const ultimaMetrica  = metricasOrdenadas.at(-1) ?? null
+  const metricaConfig  = OBJETIVO_METRICA_CONFIG[clientProfile?.objetivo] ?? DEFAULT_METRICA_CONFIG
 
   if (loading) {
     return (
@@ -91,144 +116,74 @@ function DashboardPage() {
   return (
     <div className="p-8 flex flex-col gap-8">
 
-      {/* ── Título ── */}
-      <h1 className="text-3xl font-black text-gray-900">Dashboard</h1>
+      <h1 className="text-4xl font-black text-gray-900">Mi progreso</h1>
 
-      {/* ── KPIs ── */}
-      {/* TODO: reemplazar kpisMock con datos reales de la API */}
-      <div className="flex gap-4">
-        {kpisMock.map((kpi) => (
-          <KPICard
-            key={kpi.title}
-            title={kpi.title}
-            value={kpi.value}
-            trend={kpi.trend}
-            positive={kpi.positive}
+      {/* ── Evolución individual ── */}
+      <Card
+        title="Evolución individual"
+        action={
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setPeriodo((p) => (p === 'semanal' ? 'mensual' : 'semanal'))}
+          >
+            {periodo === 'semanal' ? 'Semana' : 'Mes'}
+          </Button>
+        }
+      >
+        {mejorPunto && (
+          <p className="text-sm text-[#1D7FD8] mb-3">
+            Tu mejor semana fue la del {mejorFechaLabel} · Conformidad: {mejorPunto.conformidad}%
+          </p>
+        )}
+        {loadingEv ? (
+          <div className="h-72 flex items-center justify-center">
+            <span className="w-6 h-6 border-4 border-[#1D7FD8] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : evolucion.length === 0 ? (
+          <p className="text-sm text-gray-400 py-8 text-center">
+            Sin datos de evolución para este periodo
+          </p>
+        ) : (
+          <EvolucionChart
+            data={evolucion}
+            highlightFecha={mejorPunto?.fecha}
+            highlightConformidad={mejorPunto?.conformidad}
+            height={280}
           />
-        ))}
-      </div>
-
-      {/* ── Evolución de rendimiento ── */}
-      {/* TODO: GET /api/v1/assignments/me/sessions para cumplimiento real por semana */}
-      <Card title="Evolución de rendimiento">
-        <div className="h-56">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={evolucionData} margin={{ top: 4, right: 16, left: -16, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis
-                dataKey="semana"
-                tick={{ fontSize: 12, fill: '#9ca3af' }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fontSize: 12, fill: '#9ca3af' }}
-                axisLine={false}
-                tickLine={false}
-                domain={[0, 100]}
-                unit="%"
-              />
-              <Tooltip
-                formatter={(v) => [`${v}%`, 'Rendimiento']}
-                contentStyle={tooltipStyle}
-              />
-              <Line
-                type="monotone"
-                dataKey="rendimiento"
-                stroke="#1D7FD8"
-                strokeWidth={2.5}
-                dot={{ r: 4, fill: '#1D7FD8', strokeWidth: 0 }}
-                activeDot={{ r: 6 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-        <p className="text-xs text-gray-400 text-center mt-2">
-          Índice de rendimiento semanal (% cumplimiento y conformidad)
-        </p>
+        )}
       </Card>
 
-      {/* ── Tipo de ejercicios + Progreso físico ── */}
+      {/* ── Tipo de ejercicios + Evolución del peso ── */}
       <div className="grid grid-cols-2 gap-4">
 
-        {/* TODO: GET /api/v1/assignments/me — distribución por tipo de ejercicio */}
+        {/* ── Tipo de ejercicios ── */}
         <Card title="Tipo de ejercicios">
-          <div className="h-56 flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={tipoEjerciciosData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={55}
-                  outerRadius={80}
-                  paddingAngle={3}
-                  dataKey="value"
-                >
-                  {tipoEjerciciosData.map((_, i) => (
-                    <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(v, name) => [`${v}%`, name]}
-                  contentStyle={tooltipStyle}
-                />
-                <Legend
-                  iconType="circle"
-                  iconSize={8}
-                  formatter={(value) => (
-                    <span style={{ fontSize: '12px', color: '#6b7280' }}>{value}</span>
-                  )}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+          <DonutChart
+            data={donutData}
+            subtitle={`Últimas 8 semanas · ${totalEjercicios} ejercicios totales`}
+            highlightText={donutHighlight}
+            emptyMessage="Completa al menos una sesión para ver la distribución"
+          />
         </Card>
 
-        <Card title="Progreso físico">
-          {pesoData.length > 0 ? (
-            <>
-              <div className="h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={pesoData} margin={{ top: 4, right: 16, left: -16, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis
-                      dataKey="mes"
-                      tick={{ fontSize: 12, fill: '#9ca3af' }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      tick={{ fontSize: 12, fill: '#9ca3af' }}
-                      axisLine={false}
-                      tickLine={false}
-                      domain={['auto', 'auto']}
-                      unit=" kg"
-                    />
-                    <Tooltip
-                      formatter={(v) => [`${v} kg`, 'Peso']}
-                      contentStyle={tooltipStyle}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="peso"
-                      stroke="#34d399"
-                      strokeWidth={2.5}
-                      dot={{ r: 4, fill: '#34d399', strokeWidth: 0 }}
-                      activeDot={{ r: 6 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-              <p className="text-xs text-gray-400 text-center mt-2">
-                Evolución del peso corporal (kg)
-              </p>
-            </>
-          ) : (
-            <p className="text-sm text-gray-400 text-center py-4">
-              Sin registros de peso disponibles
+        {/* ── Métrica por objetivo ── */}
+        <Card title={metricaConfig.titulo}>
+          {ultimaMetrica != null && (
+            <p className="text-sm text-gray-400 mb-3">
+              {metricaConfig.mostrar.includes('peso') && ultimaMetrica.peso_kg != null && (
+                <>Peso: <strong className="text-gray-700">{ultimaMetrica.peso_kg} kg</strong></>
+              )}
+              {metricaConfig.mostrar.includes('peso') && metricaConfig.mostrar.includes('grasa') &&
+               ultimaMetrica.peso_kg != null && ultimaMetrica.grasa_pct != null && (
+                <span className="mx-2">·</span>
+              )}
+              {metricaConfig.mostrar.includes('grasa') && ultimaMetrica.grasa_pct != null && (
+                <>Grasa: <strong className="text-gray-700">{ultimaMetrica.grasa_pct}%</strong></>
+              )}
             </p>
           )}
+          <MetricasEvolucionChart data={metricasChartData} height={224} mostrar={metricaConfig.mostrar} />
         </Card>
 
       </div>

@@ -24,6 +24,10 @@ class AsignacionRutina(Base):
     sessions = relationship("SesionRutina", back_populates="assignment", cascade="all, delete-orphan")
     exercise_customizations = relationship("AsignacionEjercicio", back_populates="assignment", cascade="all, delete-orphan")
 
+    @property
+    def nombre_rutina(self):
+        return self.routine.nombre if self.routine else None
+
 
 class SesionRutina(Base):
     __tablename__ = "sesionRutina"
@@ -58,6 +62,10 @@ class EjercicioRealizado(Base):
 
     session = relationship("SesionRutina", back_populates="completed_exercises")
     exercise = relationship("Ejercicio", back_populates="completed_exercises")
+
+    @property
+    def nombre_ejercicio(self):
+        return self.exercise.nombre if self.exercise else None
 
 
 class AsignacionEjercicio(Base):

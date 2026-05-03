@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { Settings, LogOut } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 
-function Sidebar({ navItems }) {
+function Sidebar({ navItems, onAjustesClick }) {
   const { logout } = useAuth()
   const navigate = useNavigate()
 
@@ -41,19 +41,29 @@ function Sidebar({ navItems }) {
 
       <div className="px-3 pb-6 flex flex-col gap-1">
         <div className="border-t border-white/15 my-2" />
-        <NavLink
-          to="/settings"
-          className={({ isActive }) =>
-            `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-              isActive
-                ? 'bg-white/15 text-white'
-                : 'text-white/65 hover:bg-white/10 hover:text-white'
-            }`
-          }
-        >
-          <Settings size={18} strokeWidth={1.75} />
-          Ajustes
-        </NavLink>
+        {onAjustesClick ? (
+          <button
+            onClick={onAjustesClick}
+            className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-white/65 hover:bg-white/10 hover:text-white transition-colors w-full text-left"
+          >
+            <Settings size={18} strokeWidth={1.75} />
+            Ajustes
+          </button>
+        ) : (
+          <NavLink
+            to="/settings"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-white/15 text-white'
+                  : 'text-white/65 hover:bg-white/10 hover:text-white'
+              }`
+            }
+          >
+            <Settings size={18} strokeWidth={1.75} />
+            Ajustes
+          </NavLink>
+        )}
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-white/65 hover:bg-white/10 hover:text-white transition-colors w-full text-left"

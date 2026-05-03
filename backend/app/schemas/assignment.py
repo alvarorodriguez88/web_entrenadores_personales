@@ -14,6 +14,7 @@ class AssignmentStatusUpdate(BaseModel):
     estado: str
 
 class AssignmentUpdate(BaseModel):
+    fecha_inicio: Optional[date] = None
     fecha_fin: Optional[date] = None
     notas: Optional[str] = None
 
@@ -23,6 +24,7 @@ class AssignmentResponse(BaseModel):
     id_asignacion_rutina: int
     id_cliente: int
     id_rutina: int
+    nombre_rutina: Optional[str] = None
     fecha_inicio: date
     fecha_fin: date
     estado: str
@@ -77,6 +79,7 @@ class ExerciseLogResponse(BaseModel):
     id_ejercicio_realizado: int
     id_sesion: int
     id_ejercicio: int
+    nombre_ejercicio: Optional[str] = None
     orden: int
     series_real: int
     reps_real: int

@@ -1,13 +1,13 @@
 from datetime import date, timedelta
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 from app.models.user import Cliente
-from app.models.assignment import AsignacionRutina, SesionRutina, EjercicioRealizado
+from app.models.assignment import AsignacionRutina, SesionRutina, EjercicioRealizado, AsignacionEjercicio
 from app.models.routine import Rutina, BloqueRutina, BloqueRutinaEjercicio
 from app.models.exercise import Ejercicio, EjercicioCategoria, Categoria
 from app.services.user_service import get_trainer_clients
-from app.services.assignment_service import _verify_client_belongs_to_trainer
+from app.services.assignment_service import _verify_client_belongs_to_trainer, auto_finalize_expired
 
 
 def _get_period_range(periodo: str) -> tuple[date, date, date, date]:
@@ -327,6 +327,48 @@ def get_trainer_performance_distribution(db: Session, trainer_id: int) -> dict:
 
     return {"alto": alto, "medio": medio, "bajo": bajo, "inactivo": inactivo}
 
+def get_trainer_clients_list(db: Session, trainer_id: int) -> list[dict]:
+    clients = get_trainer_clients(db, trainer_id)
+    if not clients:
+        return []
+
+    client_ids = [c.id_usuario for c in clients]
+
+    today = date.today()
+    assignments = db.query(AsignacionRutina, Rutina).join(
+        Rutina, AsignacionRutina.id_rutina == Rutina.id_rutina
+    ).filter(
+        AsignacionRutina.id_cliente.in_(client_ids),
+        AsignacionRutina.estado == "ACTIVA",
+        Rutina.archivado == False,
+        or_(AsignacionRutina.fecha_inicio == None, AsignacionRutina.fecha_inicio <= today),
+        or_(AsignacionRutina.fecha_fin   == None, AsignacionRutina.fecha_fin   >= today),
+    ).all()
+    rutina_map = {a.id_cliente: r.nombre for a, r in assignments}
+
+    sesion_rows = db.query(
+        AsignacionRutina.id_cliente,
+        func.max(SesionRutina.fecha_hora).label("ultima")
+    ).join(
+        SesionRutina, SesionRutina.id_asignacion == AsignacionRutina.id_asignacion_rutina
+    ).filter(
+        AsignacionRutina.id_cliente.in_(client_ids)
+    ).group_by(AsignacionRutina.id_cliente).all()
+    sesion_map = {row.id_cliente: row.ultima for row in sesion_rows}
+
+    return [
+        {
+            "id_cliente":    c.id_usuario,
+            "nombre":        c.user.nombre,
+            "apellidos":     c.user.apellidos,
+            "email":         c.user.email,
+            "nivel":         c.nivel,
+            "rutina_activa": rutina_map.get(c.id_usuario),
+            "ultima_sesion": sesion_map.get(c.id_usuario),
+        }
+        for c in clients
+    ]
+
 def get_trainer_clients_table(db: Session, trainer_id: int, periodo: str) -> list[dict]:
     start, end, _, _ = _get_period_range(periodo)
     clients = get_trainer_clients(db, trainer_id)
@@ -342,6 +384,7 @@ def get_trainer_clients_table(db: Session, trainer_id: int, periodo: str) -> lis
             "nombre": client.user.nombre,
             "apellidos": client.user.apellidos,
             "cumplimiento_pct": _get_client_cumplimiento(db, client.id_usuario, start, end),
+            "conformidad_avg": _get_client_conformidad(db, client.id_usuario, start, end),
             "rendimiento_avg": _get_client_rendimiento(db, client.id_usuario, start, end),
             "ultima_sesion": ultima_sesion[0] if ultima_sesion else None,
             "nivel": client.nivel,
@@ -398,20 +441,27 @@ def get_client_kpis(db: Session, client_id: int, periodo: str) -> dict:
     }
 
 def get_client_weekly_calendar(db: Session, client_id: int) -> list[dict]:
+    auto_finalize_expired(db, client_id)
+
     today = date.today()
     monday = today - timedelta(days=today.weekday())
 
-    assignment = db.query(AsignacionRutina).filter(
+    assignments = db.query(AsignacionRutina).join(Rutina).filter(
         AsignacionRutina.id_cliente == client_id,
-        AsignacionRutina.estado == "ACTIVA"
-    ).first()
+        AsignacionRutina.estado == "ACTIVA",
+        Rutina.archivado == False,
+        AsignacionRutina.fecha_inicio <= today,
+        AsignacionRutina.fecha_fin   >= today,
+    ).all()
 
-    planned_days = set()
-    if assignment:
+    planned_days: set[int] = set()
+    assignment_ids: list[int] = []
+    for a in assignments:
         blocks = db.query(BloqueRutina).filter(
-            BloqueRutina.id_rutina == assignment.id_rutina
+            BloqueRutina.id_rutina == a.id_rutina
         ).all()
-        planned_days = {b.numero_dia for b in blocks}
+        planned_days.update(b.numero_dia for b in blocks)
+        assignment_ids.append(a.id_asignacion_rutina)
 
     result = []
     for i in range(7):
@@ -420,9 +470,9 @@ def get_client_weekly_calendar(db: Session, client_id: int) -> list[dict]:
         tiene_sesion = weekday in planned_days
 
         completada = False
-        if tiene_sesion and assignment:
+        if tiene_sesion and assignment_ids:
             completada = db.query(SesionRutina).filter(
-                SesionRutina.id_asignacion == assignment.id_asignacion_rutina,
+                SesionRutina.id_asignacion.in_(assignment_ids),
                 func.date(SesionRutina.fecha_hora) == day
             ).first() is not None
 
@@ -433,39 +483,116 @@ def get_client_weekly_calendar(db: Session, client_id: int) -> list[dict]:
         })
     return result
 
-def get_client_today_workout(db: Session, client_id: int) -> dict | None:
+def get_client_today_workout(db: Session, client_id: int) -> list[dict]:
+    auto_finalize_expired(db, client_id)
+
     today = date.today()
     weekday = today.weekday() + 1
 
-    assignment = db.query(AsignacionRutina).filter(
+    assignments = db.query(AsignacionRutina).join(Rutina).filter(
         AsignacionRutina.id_cliente == client_id,
-        AsignacionRutina.estado == "ACTIVA"
-    ).first()
+        AsignacionRutina.estado == "ACTIVA",
+        Rutina.archivado == False,
+        AsignacionRutina.fecha_inicio <= today,
+        AsignacionRutina.fecha_fin   >= today,
+    ).order_by(AsignacionRutina.fecha_inicio.desc()).all()
 
-    if not assignment:
-        return None
+    result = []
+    for assignment in assignments:
+        routine = db.query(Rutina).filter(
+            Rutina.id_rutina == assignment.id_rutina
+        ).first()
 
-    block = db.query(BloqueRutina).filter(
-        BloqueRutina.id_rutina == assignment.id_rutina,
-        BloqueRutina.numero_dia == weekday
-    ).first()
+        block = db.query(BloqueRutina).filter(
+            BloqueRutina.id_rutina == assignment.id_rutina,
+            BloqueRutina.numero_dia == weekday
+        ).first()
+        if not block:
+            continue
 
-    if not block:
-        return None
+        block_exercises = db.query(BloqueRutinaEjercicio, Ejercicio).join(
+            Ejercicio, BloqueRutinaEjercicio.id_ejercicio == Ejercicio.id_ejercicio
+        ).filter(
+            BloqueRutinaEjercicio.id_bloque_rutina == block.id_bloque_rutina
+        ).order_by(BloqueRutinaEjercicio.orden).all()
 
-    routine = db.query(Rutina).filter(
-        Rutina.id_rutina == assignment.id_rutina
-    ).first()
+        customizations = db.query(AsignacionEjercicio).filter(
+            AsignacionEjercicio.id_asignacion_rutina == assignment.id_asignacion_rutina
+        ).all()
+        custom_map = {c.id_bloque_rutina_ej: c for c in customizations}
 
-    exercises = db.query(Ejercicio.nombre).join(BloqueRutinaEjercicio).filter(
-        BloqueRutinaEjercicio.id_bloque_rutina == block.id_bloque_rutina
-    ).order_by(BloqueRutinaEjercicio.orden).all()
+        exercises_result = []
+        for bre, ejercicio in block_exercises:
+            custom = custom_map.get(bre.id_bloque_rutina_ejercicio)
 
-    return {
-        "nombre_bloque": block.nombre,
-        "nombre_rutina": routine.nombre,
-        "ejercicios": [e.nombre for e in exercises],
-    }
+            cat_rows = db.query(Categoria.nombre).join(
+                EjercicioCategoria, Categoria.id_categoria == EjercicioCategoria.id_categoria
+            ).filter(EjercicioCategoria.id_ejercicio == ejercicio.id_ejercicio).all()
+            categorias = [r.nombre for r in cat_rows]
+
+            exercises_result.append({
+                "id_ejercicio":   ejercicio.id_ejercicio,
+                "nombre":         ejercicio.nombre,
+                "grupo_muscular": ejercicio.grupo_muscular,
+                "equipamiento":   ejercicio.equipamiento,
+                "descripcion":    ejercicio.descripcion,
+                "video_url":      ejercicio.video_url,
+                "categorias":     categorias,
+                "series_plan":    custom.series_plan if custom and custom.series_plan is not None else bre.series_plan,
+                "reps_plan":      custom.reps_plan   if custom and custom.reps_plan   is not None else bre.reps_plan,
+                "peso_obj":       float(custom.peso_obj)     if custom and custom.peso_obj     is not None else (float(bre.peso_obj) if bre.peso_obj is not None else None),
+                "descanso_seg":   custom.descanso_seg if custom and custom.descanso_seg is not None else bre.descanso_seg,
+                "notas":          custom.notas        if custom and custom.notas        is not None else bre.notas,
+                "orden":          bre.orden,
+            })
+
+        sesion_hoy = db.query(SesionRutina).filter(
+            SesionRutina.id_asignacion == assignment.id_asignacion_rutina,
+            SesionRutina.id_bloque_rutina == block.id_bloque_rutina,
+            func.date(SesionRutina.fecha_hora) == today,
+        ).first()
+
+        result.append({
+            "id_asignacion_rutina": assignment.id_asignacion_rutina,
+            "id_bloque_rutina":     block.id_bloque_rutina,
+            "nombre_rutina":        routine.nombre,
+            "nivel_rutina":         routine.nivel,
+            "objetivo_rutina":      routine.objetivo,
+            "descripcion_rutina":   routine.descripcion,
+            "nombre_bloque":        block.nombre,
+            "numero_dia":           block.numero_dia,
+            "notas_bloque":         block.notas,
+            "fecha_inicio":         assignment.fecha_inicio,
+            "fecha_fin":            assignment.fecha_fin,
+            "ejercicios":           exercises_result,
+            "sesion_hoy": {
+                "id_sesion_rutina": sesion_hoy.id_sesion_rutina,
+                "duracion_min":     sesion_hoy.duracion_min,
+                "esfuerzo_rpe":     sesion_hoy.esfuerzo_rpe,
+                "conformidad":      sesion_hoy.conformidad,
+                "nota_rendimiento": float(sesion_hoy.nota_rendimiento) if sesion_hoy.nota_rendimiento else None,
+            } if sesion_hoy else None,
+        })
+
+    return result
+
+def get_client_recent_activity(db: Session, client_id: int) -> list[dict]:
+    sessions = db.query(SesionRutina).filter(
+        SesionRutina.id_asignacion.in_(
+            db.query(AsignacionRutina.id_asignacion_rutina).filter(
+                AsignacionRutina.id_cliente == client_id
+            )
+        )
+    ).order_by(SesionRutina.fecha_hora.desc()).limit(5).all()
+
+    return [
+        {
+            "fecha_hora": s.fecha_hora,
+            "nota_rendimiento": float(s.nota_rendimiento) if s.nota_rendimiento else None,
+            "conformidad": float(s.conformidad) if s.conformidad else None
+        }
+        for s in sessions
+    ]
 
 def get_client_evolution(db: Session, client_id: int, periodo: str) -> list[dict]:
     return _get_evolution_points(db, client_id, periodo)

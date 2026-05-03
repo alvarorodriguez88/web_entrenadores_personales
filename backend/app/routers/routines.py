@@ -2,13 +2,13 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import get_current_trainer
-from app.models.user import Entrenador
+from app.dependencies import get_current_trainer, get_current_client
+from app.models.user import Entrenador, Cliente
 from app.schemas.routine import (
     RoutineCreate, RoutineUpdate, RoutineResponse,
     BlockCreate, BlockUpdate, BlockResponse,
     BlockExerciseCreate, BlockExerciseUpdate, BlockExerciseResponse,
-    ReorderRequest
+    ReorderRequest, RoutineAssignmentClient
 )
 from app.services import routine_service
 
@@ -20,9 +20,17 @@ router = APIRouter()
 def get_routines(trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
     return routine_service.get_routines(db, trainer.id_usuario)
 
+@router.get("/client", response_model=list[RoutineResponse])
+def get_client_routines(client: Cliente = Depends(get_current_client), db: Session = Depends(get_db)):
+    return routine_service.get_client_routines(db, client.id_usuario)
+
 @router.get("/{routine_id}", response_model=RoutineResponse)
 def get_routine(routine_id: int, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
     return routine_service.get_routine_by_id(db, routine_id, trainer.id_usuario)
+
+@router.get("/client/{routine_id}", response_model=RoutineResponse)
+def get_client_routine(routine_id: int, client: Cliente = Depends(get_current_client), db: Session = Depends(get_db)):
+    return routine_service.get_client_routine(db, routine_id, client.id_usuario)
 
 @router.post("", response_model=RoutineResponse, status_code=status.HTTP_201_CREATED)
 def create_routine(data: RoutineCreate, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
@@ -91,3 +99,7 @@ def delete_block_exercise(routine_id: int, block_id: int, block_exercise_id: int
 @router.patch("/{routine_id}/blocks/{block_id}/exercises/reorder", response_model=list[BlockExerciseResponse])
 def reorder_block_exercises(routine_id: int, block_id: int, data: ReorderRequest, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
     return routine_service.reorder_block_exercises(db, routine_id, block_id, data, trainer.id_usuario)
+
+@router.get("/{routine_id}/assignments", response_model=list[RoutineAssignmentClient])
+def list_routine_assignments(routine_id: int, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
+    return routine_service.get_routine_assignments(db, routine_id, trainer.id_usuario)

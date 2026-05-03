@@ -1,16 +1,33 @@
 import { useState, useEffect } from 'react'
+import { Dumbbell, ClipboardList, Send, UserPlus } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { analyticsApi } from '../../services/api'
-import KPICard from '../../components/shared/KPICard'
-import Card from '../../components/shared/Card'
-import Button from '../../components/shared/Button'
-import { formatDateTime } from '../../utils/date'
+import KPICard             from '../../components/shared/KPICard'
+import Card                from '../../components/shared/Card'
+import AlertList           from '../../components/shared/AlertList'
+import PeriodoToggle       from '../../components/shared/PeriodoToggle'
+import ModalCrearEjercicio    from '../../components/trainer/ModalCrearEjercicio'
+import ModalCrearRutina        from '../../components/trainer/ModalCrearRutina'
+import ModalSeleccionarRutina  from '../../components/trainer/ModalSeleccionarRutina'
+import ModalAsignarRutina      from '../../components/trainer/ModalAsignarRutina'
+import ModalAnadirCliente      from '../../components/trainer/ModalAnadirCliente'
 
 const today = new Date().toLocaleDateString('es-ES', {
   day: 'numeric',
-  month: 'short',
+  month: 'long',
   year: 'numeric',
 })
+
+function initials(nombre, apellidos) {
+  return `${nombre?.[0] ?? ''}${apellidos?.[0] ?? ''}`.toUpperCase()
+}
+
+function formatFechaCorta(iso) {
+  if (!iso) return ''
+  return new Date(iso)
+    .toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+    .replace('.', '')
+}
 
 function buildKpis(data, periodo) {
   const vs = periodo === 'semanal' ? 'semana pasada' : 'mes pasado'
@@ -60,6 +77,20 @@ function InicioPage() {
   const [loading,   setLoading]   = useState(true)
   const [error,     setError]     = useState('')
 
+  const [modalEj,  setModalEj]  = useState(false)
+  const [modalRut, setModalRut] = useState(false)
+  const [modalAs,  setModalAs]  = useState(false)
+  const [modalCli, setModalCli] = useState(false)
+
+  const [modalAsignar,       setModalAsignar]       = useState(false)
+  const [rutinaSeleccionada, setRutinaSeleccionada] = useState(null)
+
+  function handleSeleccionarRutina(rutina) {
+    setModalAs(false)
+    setRutinaSeleccionada(rutina)
+    setModalAsignar(true)
+  }
+
   useEffect(() => {
     async function cargarDatos() {
       setLoading(true)
@@ -82,10 +113,6 @@ function InicioPage() {
     cargarDatos()
   }, [periodo])
 
-  function togglePeriodo() {
-    setPeriodo((p) => (p === 'semanal' ? 'mensual' : 'semanal'))
-  }
-
   if (loading) {
     return (
       <div className="p-8 flex items-center justify-center h-64">
@@ -102,20 +129,25 @@ function InicioPage() {
     )
   }
 
+  const acciones = [
+    { label: 'Crear ejercicio', icon: Dumbbell,     action: () => setModalEj(true)  },
+    { label: 'Crear rutina',    icon: ClipboardList, action: () => setModalRut(true) },
+    { label: 'Asignar rutina',  icon: Send,          action: () => setModalAs(true)  },
+    { label: 'Añadir cliente',  icon: UserPlus,      action: () => setModalCli(true) },
+  ]
+
   return (
     <div className="p-8 flex flex-col gap-8">
 
       {/* Cabecera */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-black text-gray-900">
+          <h1 className="text-4xl font-black text-gray-900">
             Bienvenido, {user?.nombre}
           </h1>
           <p className="text-sm text-gray-400 mt-1">{today}</p>
         </div>
-        <Button variant="secondary" size="sm" onClick={togglePeriodo}>
-          {periodo === 'semanal' ? 'Semana' : 'Mes'}
-        </Button>
+        <PeriodoToggle value={periodo} onChange={setPeriodo} />
       </div>
 
       {/* KPIs */}
@@ -125,49 +157,36 @@ function InicioPage() {
         ))}
       </div>
 
-      {/* Clientes que requieren atención + Actividad reciente */}
+      {/* Requieren atención + Actividad reciente */}
       <div className="grid grid-cols-2 gap-4">
 
-        <Card title="Clientes que requieren atención">
-          {alertas.length === 0 ? (
-            <p className="text-sm text-gray-400 py-8 text-center">
-              No hay clientes que requieran atención
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-3">
-              {alertas.map((a, i) => (
-                <li key={i} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-                  <span className="text-sm font-medium text-gray-700">
-                    {a.nombre} {a.apellidos}
-                  </span>
-                  <span className="text-xs text-red-500 font-medium">{a.tipo_alerta}</span>
-                </li>
-              ))}
-            </ul>
-          )}
+        <Card title="Requieren atención">
+          <AlertList
+            alertas={alertas}
+            emptyMessage="No hay clientes que requieran atención"
+          />
         </Card>
 
         <Card title="Actividad reciente">
           {actividad.length === 0 ? (
-            <p className="text-sm text-gray-400 py-8 text-center">
-              Sin actividad reciente
-            </p>
+            <p className="text-sm text-gray-400 py-8 text-center">Sin actividad reciente</p>
           ) : (
-            <ul className="flex flex-col gap-3">
+            <ul className="flex flex-col divide-y divide-gray-100">
               {actividad.map((a, i) => (
-                <li key={i} className="flex flex-col gap-0.5 py-2 border-b border-gray-100 last:border-0">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700">
-                      {a.nombre} {a.apellidos}
-                    </span>
-                    <span className="text-xs text-gray-400">
-                      {formatDateTime(a.fecha_hora)}
-                    </span>
+                <li key={i} className="flex items-center gap-3 py-3.5">
+                  <div className="w-10 h-10 rounded-full bg-gray-100 text-gray-500 font-semibold text-sm flex items-center justify-center shrink-0">
+                    {initials(a.nombre, a.apellidos)}
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500">{a.nombre_bloque}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900">{a.nombre} {a.apellidos}</p>
+                    {a.nombre_bloque && <p className="text-xs text-gray-400">{a.nombre_bloque}</p>}
+                  </div>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <span className="text-xs text-gray-400">{formatFechaCorta(a.fecha_hora)}</span>
                     {a.nota_rendimiento != null && (
-                      <span className="text-xs text-[#1D7FD8] font-medium">Rendimiento - {a.nota_rendimiento}</span>
+                      <span className="text-xs font-bold bg-blue-100 text-[#1D7FD8] px-2 py-0.5 rounded-lg">
+                        Rendimiento: {Math.round(a.nota_rendimiento)}
+                      </span>
                     )}
                   </div>
                 </li>
@@ -180,14 +199,37 @@ function InicioPage() {
 
       {/* Acciones rápidas */}
       <div>
-        <p className="text-sm font-semibold text-gray-700 mb-3">Acciones rápidas</p>
-        <div className="flex gap-3">
-          <Button variant="secondary" size="sm">Crear ejercicio</Button>
-          <Button variant="secondary" size="sm">Crear rutina</Button>
-          <Button variant="secondary" size="sm">Asignar rutina</Button>
-          <Button variant="secondary" size="sm">Añadir cliente</Button>
+        <p className="text-xl font-semibold text-gray-700 mb-6">Acciones rápidas</p>
+        <div className="grid grid-cols-4 gap-3">
+          {acciones.map(({ label, icon: Icon, action }) => (
+            <button
+              key={label}
+              onClick={action}
+              className="flex flex-col items-center justify-center gap-2 bg-white border border-gray-100 rounded-3xl py-6 px-4 hover:border-[#1D7FD8]/40 hover:shadow-sm transition-all text-center"
+            >
+              <div className="w-10 h-10 rounded-xl bg-[#1D7FD8]/10 flex items-center justify-center">
+                <Icon size={20} className="text-[#1D7FD8]" />
+              </div>
+              <span className="text-sm font-semibold text-gray-700">{label}</span>
+            </button>
+          ))}
         </div>
       </div>
+
+      {/* Modales */}
+      <ModalCrearEjercicio isOpen={modalEj}  onClose={() => setModalEj(false)} />
+      <ModalCrearRutina    isOpen={modalRut} onClose={() => setModalRut(false)} />
+      <ModalSeleccionarRutina
+        isOpen={modalAs}
+        onClose={() => setModalAs(false)}
+        onSelect={handleSeleccionarRutina}
+      />
+      <ModalAsignarRutina
+        isOpen={modalAsignar}
+        rutina={rutinaSeleccionada}
+        onClose={() => { setModalAsignar(false); setRutinaSeleccionada(null) }}
+      />
+      <ModalAnadirCliente  isOpen={modalCli} onClose={() => setModalCli(false)} />
 
     </div>
   )

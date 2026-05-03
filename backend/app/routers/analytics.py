@@ -1,15 +1,15 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from typing import Literal, Optional
+from typing import Literal
 
 from app.database import get_db
 from app.dependencies import get_current_trainer, get_current_client
 from app.models.user import Entrenador, Cliente
 from app.schemas.analytic import (
     TrainerKPIsResponse, TrainerAlertsResponse, RecentActivityItemResponse,
-    PerformanceDistributionResponse, ClientTableRowResponse,
+    PerformanceDistributionResponse, ClientTableRowResponse, ClientListRowResponse,
     EvolutionResponse, ClientKPIsResponse, WeeklyCalendarResponse,
-    TodayWorkoutResponse, ExerciseDistributionResponse
+    TodayWorkoutResponse, ExerciseDistributionResponse, ClientRecentActivityResponse
 )
 from app.services import analytics_service
 
@@ -32,6 +32,10 @@ def get_trainer_recent_activity(trainer: Entrenador = Depends(get_current_traine
 @router.get("/trainer/performance-distribution", response_model=PerformanceDistributionResponse)
 def get_trainer_performance_distribution(trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
     return analytics_service.get_trainer_performance_distribution(db, trainer.id_usuario)
+
+@router.get("/trainer/clients/list", response_model=list[ClientListRowResponse])
+def get_trainer_clients_list(trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
+    return analytics_service.get_trainer_clients_list(db, trainer.id_usuario)
 
 @router.get("/trainer/clients/table", response_model=list[ClientTableRowResponse])
 def get_trainer_clients_table(periodo: Literal["semanal", "mensual"] = "semanal", trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
@@ -57,9 +61,14 @@ def get_client_weekly_calendar(client: Cliente = Depends(get_current_client), db
     dias = analytics_service.get_client_weekly_calendar(db, client.id_usuario)
     return {"dias": dias}
 
-@router.get("/client/today-workout", response_model=Optional[TodayWorkoutResponse])
+@router.get("/client/today-workout", response_model=list[TodayWorkoutResponse])
 def get_client_today_workout(client: Cliente = Depends(get_current_client), db: Session = Depends(get_db)):
     return analytics_service.get_client_today_workout(db, client.id_usuario)
+
+@router.get("/client/recent-activity", response_model=ClientRecentActivityResponse)
+def get_client_recent_activity(client: Cliente = Depends(get_current_client), db: Session = Depends(get_db)):
+    actividades = analytics_service.get_client_recent_activity(db, client.id_usuario)
+    return {"actividades": actividades}
 
 @router.get("/client/evolution", response_model=EvolutionResponse)
 def get_client_evolution(periodo: Literal["semanal", "mensual"] = "semanal", client: Cliente = Depends(get_current_client), db: Session = Depends(get_db)):

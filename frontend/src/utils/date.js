@@ -1,3 +1,9 @@
+export function formatDate(iso) {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+}
+
 export function formatDateTime(isoString) {
   if (!isoString) return '—'
   const d = new Date(isoString)
@@ -6,5 +12,11 @@ export function formatDateTime(isoString) {
   const year  = d.getFullYear()
   const hours = String(d.getHours()).padStart(2, '0')
   const mins  = String(d.getMinutes()).padStart(2, '0')
-  return `${day}/${month}/${year} - ${hours}:${mins}`
+  return `${day}/${month}/${year} · ${hours}:${mins}`
+}
+
+export function formatShortDate(isoString) {
+  if (!isoString) return '—'
+  const d = new Date(isoString)
+  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
 }

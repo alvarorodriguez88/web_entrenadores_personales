@@ -112,6 +112,10 @@ export const exercisesApi = {
   unarchiveExercise(id) {
     return request(`/exercises/${id}/unarchive`, { method: 'PATCH' })
   },
+
+  getExerciseRoutines(id) {
+    return request(`/exercises/${id}/routines`)
+  },
 }
 
 
@@ -123,6 +127,14 @@ export const routinesApi = {
 
   getRoutine(id) {
     return request(`/routines/${id}`)
+  },
+
+  getMyRoutines() {
+    return request('/routines/client')
+  },
+
+  getClientRoutine(id) {
+    return request(`/routines/client/${id}`)
   },
 
   createRoutine(data) {
@@ -196,6 +208,10 @@ export const routinesApi = {
   reorderBlockExercises(routineId, blockId, data) {
     return request(`/routines/${routineId}/blocks/${blockId}/exercises/reorder`, { method: 'PATCH', body: data })
   },
+
+  getRoutineAssignments(id) {
+    return request(`/routines/${id}/assignments`)
+  },
 }
 
 
@@ -265,6 +281,10 @@ export const assignmentsApi = {
     return request('/assignments/me')
   },
 
+  getMySessionsOverview() {
+    return request('/assignments/me/sessions')
+  },
+
   getMyAssignmentExercises(assignmentId) {
     return request(`/assignments/me/${assignmentId}/exercises`)
   },
@@ -317,6 +337,10 @@ export const analyticsApi = {
     return request('/analytics/trainer/performance-distribution')
   },
 
+  getTrainerClientsList() {
+    return request('/analytics/trainer/clients/list')
+  },
+
   getTrainerClientsTable(periodo = 'semanal') {
     return request(`/analytics/trainer/clients/table?periodo=${periodo}`)
   },
@@ -348,6 +372,10 @@ export const analyticsApi = {
 
   getClientExerciseDistribution() {
     return request('/analytics/client/exercise-distribution')
+  },
+
+  getClientRecentActivity() {
+    return request('/analytics/client/recent-activity')
   },
 }
 

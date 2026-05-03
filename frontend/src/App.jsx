@@ -11,6 +11,7 @@ import RegisterPage from './pages/auth/RegisterPage'
 import ClientHomePage from './pages/client/InicioPage'
 import ClientDashboardPage from './pages/client/DashboardPage'
 import ExercisesPage from './pages/client/EntrenamientoPage'
+import SesionPage from './pages/client/SesionPage'
 
 import TrainerHomePage from './pages/trainer/InicioPage'
 import TrainerDashboardPage from './pages/trainer/DashboardPage'
@@ -106,6 +107,15 @@ function App() {
                 <TrainerLayout>
                   <ClientePerfilPage />
                 </TrainerLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/client/sesion"
+            element={
+              <ProtectedRoute requiredRole="client">
+                <SesionPage />
               </ProtectedRoute>
             }
           />

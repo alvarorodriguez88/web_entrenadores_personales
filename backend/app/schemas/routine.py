@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional
 from decimal import Decimal
 
@@ -70,6 +70,7 @@ class BlockExerciseResponse(BaseModel):
     id_bloque_rutina_ejercicio: int
     id_bloque_rutina: int
     id_ejercicio: int
+    nombre_ejercicio: Optional[str] = None
     orden: int
     series_plan: int
     reps_plan: int
@@ -79,3 +80,13 @@ class BlockExerciseResponse(BaseModel):
 
 class ReorderRequest(BaseModel):
     ordered_ids: list[int]
+
+class RoutineAssignmentClient(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id_asignacion_rutina: int
+    id_cliente: int
+    nombre: str
+    apellidos: str
+    fecha_inicio: Optional[date] = None
+    fecha_fin: Optional[date] = None
+    estado: str

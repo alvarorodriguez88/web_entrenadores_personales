@@ -1,6 +1,6 @@
 import { X } from 'lucide-react'
 
-function Modal({ isOpen, onClose, title, children }) {
+function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-lg' }) {
   if (!isOpen) return null
 
   return (
@@ -9,7 +9,7 @@ function Modal({ isOpen, onClose, title, children }) {
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-lg max-h-[90vh] flex flex-col bg-white rounded-2xl shadow-xl animate-modal-in"
+        className={`relative w-full ${maxWidth} max-h-[90vh] flex flex-col bg-white rounded-2xl shadow-xl animate-modal-in`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Cabecera */}
