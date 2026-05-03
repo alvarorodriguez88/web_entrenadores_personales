@@ -47,7 +47,7 @@ function DashboardPage() {
           { name: 'Medio',            value: distData.medio,    color: DONUT_COLORS[1] },
           { name: 'Bajo',             value: distData.bajo,     color: DONUT_COLORS[2] },
           { name: 'Inactivo',         value: distData.inactivo, color: DONUT_COLORS[3] },
-        ].filter(item => item.value > 0))
+        ].filter(item => item.value > 0).sort((a, b) => b.value - a.value))
         setAlertas(toArray(alertasData, 'items', 'alertas'))
         setTablaClientes(toArray(tablaData, 'items', 'clientes'))
       } catch (err) {

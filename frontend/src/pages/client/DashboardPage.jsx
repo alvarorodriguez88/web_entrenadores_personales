@@ -1,29 +1,19 @@
 import { useState, useEffect } from 'react'
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  ReferenceDot,
-} from 'recharts'
-import Card           from '../../components/shared/Card'
-import Button         from '../../components/shared/Button'
-import EvolucionChart from '../../components/shared/EvolucionChart'
-import DonutChart     from '../../components/shared/DonutChart'
+import Card                   from '../../components/shared/Card'
+import Button                 from '../../components/shared/Button'
+import EvolucionChart         from '../../components/shared/EvolucionChart'
+import DonutChart             from '../../components/shared/DonutChart'
+import MetricasEvolucionChart from '../../components/shared/MetricasEvolucionChart'
 import { metricsApi, analyticsApi, usersApi } from '../../services/api'
 
-const OBJETIVO_CONFIG = {
-  PERDER_PESO:         { unit: 'kg', color: '#f59e0b' },
-  GANAR_MASA:          { unit: 'kg', color: '#34d399' },
-  MEJORAR_FUERZA:      { unit: 'kg', color: '#a78bfa' },
-  MEJORAR_RESISTENCIA: { unit: 'kg', color: '#1D7FD8' },
-  MANTENIMIENTO:       { unit: 'kg', color: '#6b7280' },
+const OBJETIVO_METRICA_CONFIG = {
+  PERDER_PESO:         { titulo: 'Pérdida de peso',     mostrar: ['peso', 'grasa'] },
+  GANAR_MASA:          { titulo: 'Ganancia muscular',   mostrar: ['peso', 'grasa'] },
+  MEJORAR_FUERZA:      { titulo: 'Seguimiento de peso', mostrar: ['peso']          },
+  MEJORAR_RESISTENCIA: { titulo: 'Seguimiento de peso', mostrar: ['peso']          },
+  MANTENIMIENTO:       { titulo: 'Control de peso',     mostrar: ['peso']          },
 }
-const DEFAULT_CONFIG = { unit: 'kg', color: '#f97316' }
-
-const tooltipStyle = {
-  borderRadius: '12px',
-  border: 'none',
-  boxShadow: '0 4px 12px rgba(0,0,0,0.10)',
-  fontSize: '12px',
-}
+const DEFAULT_METRICA_CONFIG = { titulo: 'Composición corporal', mostrar: ['peso', 'grasa'] }
 
 function DashboardPage() {
   const [loadingEv,      setLoadingEv]      = useState(false)
@@ -91,23 +81,21 @@ function DashboardPage() {
     ? <><span className="font-bold">{topCategoria.categoria}</span> es tu categoría principal con un {topCategoria.porcentaje}% del total</>
     : null
 
-  // ── Evolución del peso ────────────────────────────────────────────
-  const chartConfig = OBJETIVO_CONFIG[clientProfile?.objetivo] ?? DEFAULT_CONFIG
-
-  const pesoData = [...metricas]
+  // ── Composición corporal ─────────────────────────────────────────
+  const metricasOrdenadas = [...metricas]
     .sort((a, b) => (a.fecha_registro ?? a.fecha) > (b.fecha_registro ?? b.fecha) ? 1 : -1)
-    .filter((m) => m.peso_kg != null)
-    .map((m) => {
-      const d = new Date(m.fecha_registro ?? m.fecha)
-      return {
-        fecha: `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`,
-        peso:  m.peso_kg,
-        _ms:   d.getTime(),
-      }
-    })
 
-  const pesoActual  = pesoData.at(-1)?.peso ?? null
-  const pesoInicial = pesoData[0]?.peso ?? null
+  const metricasChartData = metricasOrdenadas.map((m) => {
+    const d = new Date(m.fecha_registro ?? m.fecha)
+    return {
+      fecha: `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`,
+      peso:  m.peso_kg  != null ? Number(m.peso_kg)  : null,
+      grasa: m.grasa_pct != null ? Number(m.grasa_pct) : null,
+    }
+  })
+
+  const ultimaMetrica  = metricasOrdenadas.at(-1) ?? null
+  const metricaConfig  = OBJETIVO_METRICA_CONFIG[clientProfile?.objetivo] ?? DEFAULT_METRICA_CONFIG
 
   if (loading) {
     return (
@@ -179,67 +167,23 @@ function DashboardPage() {
           />
         </Card>
 
-        {/* ── Evolución del peso ── */}
-        <Card title="Evolución del peso">
-          {pesoData.length > 0 ? (
-            <>
-              {pesoActual != null && (
-                <p className="text-sm text-gray-400 mb-3">
-                  Peso actual: <strong className="text-gray-700">{pesoActual} kg</strong>
-                </p>
+        {/* ── Métrica por objetivo ── */}
+        <Card title={metricaConfig.titulo}>
+          {ultimaMetrica != null && (
+            <p className="text-sm text-gray-400 mb-3">
+              {metricaConfig.mostrar.includes('peso') && ultimaMetrica.peso_kg != null && (
+                <>Peso: <strong className="text-gray-700">{ultimaMetrica.peso_kg} kg</strong></>
               )}
-              <div className="h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={pesoData} margin={{ top: 4, right: 48, left: -16, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis
-                      dataKey="fecha"
-                      tick={{ fontSize: 12, fill: '#9ca3af' }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      tick={{ fontSize: 12, fill: '#9ca3af' }}
-                      axisLine={false}
-                      tickLine={false}
-                      domain={['auto', 'auto']}
-                      unit=" kg"
-                    />
-                    <Tooltip
-                      formatter={(v) => [`${v} kg`, 'Peso']}
-                      contentStyle={tooltipStyle}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="peso"
-                      stroke={chartConfig.color}
-                      strokeWidth={2.5}
-                      dot={{ r: 4, fill: chartConfig.color, strokeWidth: 0 }}
-                      activeDot={{ r: 6 }}
-                    />
-                    {pesoData.length > 0 && pesoActual != null && (
-                      <ReferenceDot
-                        x={pesoData.at(-1).fecha}
-                        y={pesoActual}
-                        r={0}
-                        label={{
-                          value: `${pesoActual} kg`,
-                          position: 'right',
-                          fill: chartConfig.color,
-                          fontSize: 12,
-                          fontWeight: 'bold',
-                        }}
-                      />
-                    )}
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </>
-          ) : (
-            <p className="text-sm text-gray-400 text-center py-16">
-              Sin registros de peso disponibles
+              {metricaConfig.mostrar.includes('peso') && metricaConfig.mostrar.includes('grasa') &&
+               ultimaMetrica.peso_kg != null && ultimaMetrica.grasa_pct != null && (
+                <span className="mx-2">·</span>
+              )}
+              {metricaConfig.mostrar.includes('grasa') && ultimaMetrica.grasa_pct != null && (
+                <>Grasa: <strong className="text-gray-700">{ultimaMetrica.grasa_pct}%</strong></>
+              )}
             </p>
           )}
+          <MetricasEvolucionChart data={metricasChartData} height={224} mostrar={metricaConfig.mostrar} />
         </Card>
 
       </div>

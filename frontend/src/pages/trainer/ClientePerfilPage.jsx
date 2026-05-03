@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react'
 import { usersApi, metricsApi, analyticsApi, assignmentsApi, routinesApi } from '../../services/api'
 import Button           from '../../components/shared/Button'
 import Card             from '../../components/shared/Card'
 import PeriodoToggle    from '../../components/shared/PeriodoToggle'
-import EvolucionChart   from '../../components/shared/EvolucionChart'
+import EvolucionChart         from '../../components/shared/EvolucionChart'
+import MetricasEvolucionChart from '../../components/shared/MetricasEvolucionChart'
 import ModalGestionarRutinas from '../../components/trainer/ModalGestionarRutinas'
 
 const NIVEL_BADGE = {
@@ -16,6 +17,11 @@ const NIVEL_BADGE = {
 
 function initials(nombre) {
   return nombre.trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase()
+}
+
+function formatObjetivo(v) {
+  if (!v) return '—'
+  return v.toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
 function ClientePerfilPage() {
@@ -33,7 +39,8 @@ function ClientePerfilPage() {
   const [evolucion, setEvolucion] = useState([])
   const [loadingEv, setLoadingEv] = useState(true)
 
-  const [modalGestionar, setModalGestionar] = useState(false)
+  const [modalGestionar,   setModalGestionar]   = useState(false)
+  const [historialAbierto, setHistorialAbierto] = useState(false)
 
   useEffect(() => {
     cargarDatos()
@@ -109,6 +116,14 @@ function ClientePerfilPage() {
     ? metricas.reduce((a, b) => (a.fecha >= b.fecha ? a : b))
     : null
 
+  const metricasChart = [...metricas]
+    .sort((a, b) => new Date(a.fecha_registro) - new Date(b.fecha_registro))
+    .map(m => ({
+      fecha: new Date(m.fecha_registro).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' }),
+      peso:  m.peso_kg   != null ? parseFloat(m.peso_kg)   : null,
+      grasa: m.grasa_pct != null ? parseFloat(m.grasa_pct) : null,
+    }))
+
   return (
     <div className="p-8 flex flex-col gap-6">
 
@@ -120,7 +135,7 @@ function ClientePerfilPage() {
         Volver a clientes
       </button>
 
-      <h1 className="text-3xl font-black text-gray-900">{nombre}</h1>
+      <h1 className="text-4xl font-black text-gray-900">Perfil individual</h1>
 
       {/* Datos del cliente */}
       <Card>
@@ -150,7 +165,7 @@ function ClientePerfilPage() {
             </div>
             <div className="flex flex-col gap-0.5">
               <p className="text-xs text-gray-400">Objetivo</p>
-              <p className="text-sm font-semibold text-gray-700">{cliente.objetivo ?? '—'}</p>
+              <p className="text-sm font-semibold text-gray-700">{formatObjetivo(cliente.objetivo)}</p>
             </div>
             <div className="flex flex-col gap-0.5">
               <p className="text-xs text-gray-400">Rutina activa</p>
@@ -183,6 +198,33 @@ function ClientePerfilPage() {
           <p className="text-sm text-gray-400 text-center py-2">
             Sin métricas registradas
           </p>
+        )}
+
+        {metricas.length > 0 && (
+          <div className="mt-2">
+            <button
+              onClick={() => setHistorialAbierto(v => !v)}
+              className="flex items-center gap-1.5 text-sm text-[#1D7FD8] font-medium
+                         hover:text-blue-700 transition-colors w-full justify-center
+                         border-t border-gray-100 pt-3 mt-2"
+            >
+              {historialAbierto ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              {historialAbierto ? 'Ocultar historial' : 'Ver historial'}
+            </button>
+
+            {historialAbierto && (
+              <div className="grid grid-cols-2 gap-6 mt-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-2 text-center">Evolución del peso</p>
+                  <MetricasEvolucionChart data={metricasChart} mostrar={['peso']} height={200} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-2 text-center">Evolución de % grasa</p>
+                  <MetricasEvolucionChart data={metricasChart} mostrar={['grasa']} height={200} />
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </Card>
 

@@ -58,7 +58,7 @@ function EvolucionChart({ data = [], xKey = 'fecha', height = 280, highlightFech
           tick={{ fontSize: 12, fill: '#60a5fa' }}
           axisLine={false}
           tickLine={false}
-          label={{ value: 'Rendimiento (RPE)', angle: 90, position: 'insideRight', style: { fill: '#60a5fa', fontSize: 11 }, dx: 0, dy: 50 }}
+          label={{ value: 'Rendimiento', angle: 90, position: 'insideRight', style: { fill: '#60a5fa', fontSize: 11 }, dx: 0, dy: 50 }}
         />
 
         <Tooltip content={<CustomTooltip />} />
@@ -93,7 +93,7 @@ function EvolucionChart({ data = [], xKey = 'fecha', height = 280, highlightFech
           yAxisId="nota"
           type="monotone"
           dataKey="rendimiento"
-          name="Rendimiento (RPE 0–10, eje der.)"
+          name="Rendimiento (0–10, eje der.)"
           stroke="#60a5fa"
           strokeWidth={2.5}
           dot={{ r: 4, fill: '#60a5fa', strokeWidth: 0 }}

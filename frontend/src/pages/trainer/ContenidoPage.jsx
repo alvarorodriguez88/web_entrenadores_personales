@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Upload, Dumbbell, ClipboardList, Film, Image as ImageIcon, Archive, ArchiveRestore } from 'lucide-react'
+import { Upload, Dumbbell, ClipboardList, Film, Image as ImageIcon, Archive, ArchiveRestore, Hash, Plus, Search } from 'lucide-react'
 import { exercisesApi, routinesApi } from '../../services/api'
 import TabBar              from '../../components/shared/TabBar'
 import Table               from '../../components/shared/Table'
@@ -61,12 +61,23 @@ function TabEjercicios() {
   }
 
   const columnas = [
-    { key: 'nombre', label: 'Ejercicio' },
+    {
+      key: 'nombre',
+      label: 'Ejercicio',
+      render: (v) => (
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+            <Hash size={14} className="text-[#1D7FD8]" />
+          </div>
+          <span className="font-semibold text-gray-900">{v}</span>
+        </div>
+      ),
+    },
     {
       key: 'grupo_muscular',
       label: 'Grupo muscular',
       render: (v) => v
-        ? <span className="inline-flex px-2 py-0.5 rounded-md bg-blue-50 text-[#1D7FD8] text-xs font-medium">{v}</span>
+        ? <span className="inline-flex px-2.5 py-1 rounded-lg bg-blue-50 text-[#1D7FD8] text-xs font-medium">{v}</span>
         : <span className="text-gray-300">—</span>,
     },
     { key: 'equipamiento', label: 'Equipamiento' },
@@ -74,8 +85,9 @@ function TabEjercicios() {
       key: 'archivado',
       label: 'Estado',
       render: (v) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold
           ${v ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${v ? 'bg-red-500' : 'bg-green-500'}`} />
           {v ? 'Inactivo' : 'Activo'}
         </span>
       ),
@@ -91,10 +103,7 @@ function TabEjercicios() {
             disabled={loading}
             title={row.archivado ? 'Activar' : 'Archivar'}
             onClick={(e) => { e.stopPropagation(); handleToggle(row) }}
-            className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors disabled:opacity-50
-              ${row.archivado
-                ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+            className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-gray-50 text-gray-400 hover:bg-gray-100 transition-colors disabled:opacity-50"
           >
             {loading ? '…' : <Icon size={15} />}
           </button>
@@ -111,21 +120,40 @@ function TabEjercicios() {
 
   return (
     <>
-      <div className="flex flex-wrap gap-3 items-end">
-        <div className="flex-1 min-w-36">
-          <Input placeholder="Nombre ejercicio" value={busqueda}    onChange={(e) => setBusqueda(e.target.value)} />
+      <div className="flex flex-wrap gap-3 items-center">
+        <div className="flex-1 min-w-44 relative">
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          <input
+            placeholder="Nombre ejercicio"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            className="w-full bg-white border border-gray-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:border-[#1D7FD8] transition-colors"
+          />
         </div>
-        <div className="w-40">
-          <Input placeholder="Grupo muscular"   value={filtroGrupo} onChange={(e) => setFiltroGrupo(e.target.value)} />
+        <div className="w-44">
+          <input
+            placeholder="Grupo muscular"
+            value={filtroGrupo}
+            onChange={(e) => setFiltroGrupo(e.target.value)}
+            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:border-[#1D7FD8] transition-colors"
+          />
         </div>
-        <div className="w-40">
-          <Input placeholder="Equipamiento"     value={filtroEquip} onChange={(e) => setFiltroEquip(e.target.value)} />
+        <div className="w-44">
+          <input
+            placeholder="Equipamiento"
+            value={filtroEquip}
+            onChange={(e) => setFiltroEquip(e.target.value)}
+            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:border-[#1D7FD8] transition-colors"
+          />
         </div>
-        <Button onClick={() => setModalEj(true)}>Crear ejercicio</Button>
+        <Button onClick={() => setModalEj(true)}>
+          <Plus size={15} />
+          Crear ejercicio
+        </Button>
       </div>
 
       <div className="mt-4">
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2 mb-3">
           <p className="text-sm font-semibold text-gray-700">Tabla de ejercicios</p>
           {!loadingEj && !errorEj && (
             <span className="text-xs font-semibold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
@@ -145,7 +173,9 @@ function TabEjercicios() {
             <p className="text-sm">No se encontraron ejercicios</p>
           </div>
         ) : (
-          <Table columns={columnas} data={filtrados} onRowClick={setSelectedEjercicio} />
+          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+            <Table columns={columnas} data={filtrados} onRowClick={setSelectedEjercicio} />
+          </div>
         )}
       </div>
 
@@ -158,6 +188,7 @@ function TabEjercicios() {
         isOpen={!!selectedEjercicio}
         onClose={() => setSelectedEjercicio(null)}
         ejercicio={selectedEjercicio}
+        onSuccess={cargarEjercicios}
       />
     </>
   )

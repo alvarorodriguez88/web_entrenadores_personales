@@ -6,10 +6,11 @@ import KPICard             from '../../components/shared/KPICard'
 import Card                from '../../components/shared/Card'
 import AlertList           from '../../components/shared/AlertList'
 import PeriodoToggle       from '../../components/shared/PeriodoToggle'
-import ModalCrearEjercicio from '../../components/trainer/ModalCrearEjercicio'
-import ModalCrearRutina    from '../../components/trainer/ModalCrearRutina'
-import ModalAsignarRutina  from '../../components/trainer/ModalAsignarRutina'
-import ModalAnadirCliente  from '../../components/trainer/ModalAnadirCliente'
+import ModalCrearEjercicio    from '../../components/trainer/ModalCrearEjercicio'
+import ModalCrearRutina        from '../../components/trainer/ModalCrearRutina'
+import ModalSeleccionarRutina  from '../../components/trainer/ModalSeleccionarRutina'
+import ModalAsignarRutina      from '../../components/trainer/ModalAsignarRutina'
+import ModalAnadirCliente      from '../../components/trainer/ModalAnadirCliente'
 
 const today = new Date().toLocaleDateString('es-ES', {
   day: 'numeric',
@@ -80,6 +81,15 @@ function InicioPage() {
   const [modalRut, setModalRut] = useState(false)
   const [modalAs,  setModalAs]  = useState(false)
   const [modalCli, setModalCli] = useState(false)
+
+  const [modalAsignar,       setModalAsignar]       = useState(false)
+  const [rutinaSeleccionada, setRutinaSeleccionada] = useState(null)
+
+  function handleSeleccionarRutina(rutina) {
+    setModalAs(false)
+    setRutinaSeleccionada(rutina)
+    setModalAsignar(true)
+  }
 
   useEffect(() => {
     async function cargarDatos() {
@@ -209,7 +219,16 @@ function InicioPage() {
       {/* Modales */}
       <ModalCrearEjercicio isOpen={modalEj}  onClose={() => setModalEj(false)} />
       <ModalCrearRutina    isOpen={modalRut} onClose={() => setModalRut(false)} />
-      <ModalAsignarRutina  isOpen={modalAs}  onClose={() => setModalAs(false)} />
+      <ModalSeleccionarRutina
+        isOpen={modalAs}
+        onClose={() => setModalAs(false)}
+        onSelect={handleSeleccionarRutina}
+      />
+      <ModalAsignarRutina
+        isOpen={modalAsignar}
+        rutina={rutinaSeleccionada}
+        onClose={() => { setModalAsignar(false); setRutinaSeleccionada(null) }}
+      />
       <ModalAnadirCliente  isOpen={modalCli} onClose={() => setModalCli(false)} />
 
     </div>

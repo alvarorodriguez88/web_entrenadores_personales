@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Scale, Ruler, Droplets, Play } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { assignmentsApi, metricsApi, routinesApi, analyticsApi } from '../../services/api'
 import { formatDateTime } from '../../utils/date'
-import Card   from '../../components/shared/Card'
-import Button from '../../components/shared/Button'
+import Card                  from '../../components/shared/Card'
+import Button                from '../../components/shared/Button'
+import ModalRegistrarMetrica from '../../components/client/ModalRegistrarMetrica'
 
 const DAY_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
@@ -81,7 +82,7 @@ function ActivityItem({ activity }) {
         <span className="text-sm text-gray-400">{formatDateTime(activity.fecha_hora)}</span>
         {activity.nota_rendimiento != null && (
           <span className={`text-xs font-bold px-2.5 py-0.5 rounded-lg ${rpeBadgeClasses(conformidad)}`}>
-            RPE {activity.nota_rendimiento}
+            Rend. {activity.nota_rendimiento}/10
           </span>
         )}
       </div>
@@ -105,61 +106,63 @@ function InicioPage() {
   const weekDays = getWeekDays()
   const todayIdx = weekDays.findIndex((d) => d.isToday)
 
-  const [rutina,         setRutina]         = useState(null)
-  const [asignacion,     setAsignacion]     = useState(null)
-  const [evolution,      setEvolution]      = useState(null)
-  const [metricas,       setMetricas]       = useState([])
-  const [recentActivity, setRecentActivity] = useState([])
-  const [calendarDays,   setCalendarDays]   = useState([])
-  const [loading,        setLoading]        = useState(true)
-  const [error,          setError]          = useState('')
+  const [rutina,          setRutina]          = useState(null)
+  const [asignacion,      setAsignacion]      = useState(null)
+  const [evolution,       setEvolution]       = useState(null)
+  const [metricas,        setMetricas]        = useState([])
+  const [recentActivity,  setRecentActivity]  = useState([])
+  const [calendarDays,    setCalendarDays]    = useState([])
+  const [loading,         setLoading]         = useState(true)
+  const [error,           setError]           = useState('')
+  const [modalMetrica,    setModalMetrica]    = useState(false)
+
+  const cargarDatos = useCallback(async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const [assignments, evolutionData, metricasData, recentActivityData, calendarData] = await Promise.allSettled([
+        assignmentsApi.getMyAssignments(),
+        analyticsApi.getClientEvolution(),
+        metricsApi.getMyMetrics(),
+        analyticsApi.getClientRecentActivity(),
+        analyticsApi.getClientWeeklyCalendar(),
+      ])
+
+      if (assignments.status === 'fulfilled') {
+        const activa = assignments.value.find((a) => a.estado === 'ACTIVA') ?? null
+        setAsignacion(activa)
+
+        if (activa) {
+          const rutinaData = await routinesApi.getClientRoutine(activa.id_rutina)
+          setRutina(rutinaData)
+        }
+      }
+
+      if (metricasData.status === 'fulfilled') {
+        setMetricas(metricasData.value)
+      }
+
+      if (evolutionData.status === 'fulfilled') {
+        setEvolution(evolutionData.value)
+      }
+
+      if (recentActivityData.status === 'fulfilled') {
+        setRecentActivity(recentActivityData.value)
+      }
+
+      if (calendarData.status === 'fulfilled') {
+        setCalendarDays(calendarData.value?.dias ?? [])
+      }
+    } catch (err) {
+      setError(err.message || 'Error al cargar los datos')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
-    async function cargarDatos() {
-      setLoading(true)
-      setError('')
-      try {
-        const [assignments, evolutionData, metricasData, recentActivityData, calendarData] = await Promise.allSettled([
-          assignmentsApi.getMyAssignments(),
-          analyticsApi.getClientEvolution(),
-          metricsApi.getMyMetrics(),
-          analyticsApi.getClientRecentActivity(),
-          analyticsApi.getClientWeeklyCalendar(),
-        ])
-
-        if (assignments.status === 'fulfilled') {
-          const activa = assignments.value.find((a) => a.estado === 'ACTIVA') ?? null
-          setAsignacion(activa)
-
-          if (activa) {
-            const rutinaData = await routinesApi.getClientRoutine(activa.id_rutina)
-            setRutina(rutinaData)
-          }
-        }
-
-        if (metricasData.status === 'fulfilled') {
-          setMetricas(metricasData.value)
-        }
-
-        if (evolutionData.status === 'fulfilled') {
-          setEvolution(evolutionData.value)
-        }
-
-        if (recentActivityData.status === 'fulfilled') {
-          setRecentActivity(recentActivityData.value)
-        }
-
-        if (calendarData.status === 'fulfilled') {
-          setCalendarDays(calendarData.value?.dias ?? [])
-        }
-      } catch (err) {
-        setError(err.message || 'Error al cargar los datos')
-      } finally {
-        setLoading(false)
-      }
-    }
     cargarDatos()
-  }, [user.id])
+  }, [user.id, cargarDatos])
 
   const ultimaMetrica = metricas.length > 0
     ? metricas.reduce((a, b) => (a.fecha >= b.fecha ? a : b))
@@ -171,7 +174,7 @@ function InicioPage() {
 
   const evolucionRow = [
     { label: 'Cumplimiento', value: ultimaEvolucion?.cumplimiento != null ? `${ultimaEvolucion.cumplimiento}%` : '—' },
-    { label: 'Rendimiento',  value: ultimaEvolucion?.rendimiento  != null ? `${ultimaEvolucion.rendimiento}%`  : '—' },
+    { label: 'Rendimiento',  value: ultimaEvolucion?.rendimiento  != null ? `${Math.round(ultimaEvolucion.rendimiento * 10)}%`  : '—' },
     { label: 'Conformidad',  value: ultimaEvolucion?.conformidad  != null ? `${ultimaEvolucion.conformidad}%`  : '—' },
   ]
 
@@ -205,6 +208,7 @@ function InicioPage() {
   const fechaHoy = `${DIAS_ES[hoy.getDay()]} ${hoy.getDate()} de ${MESES_ES[hoy.getMonth()]}`
 
   return (
+    <>
     <div className="p-8 flex flex-col gap-8">
 
       {/* ── Saludo ── */}
@@ -365,6 +369,12 @@ function InicioPage() {
               </div>
             ))}
           </div>
+          <button
+            onClick={() => setModalMetrica(true)}
+            className="mt-3 w-full rounded-xl py-2.5 text-sm font-semibold text-[#1D7FD8] border border-[#1D7FD8]/30 hover:bg-[#1D7FD8]/5 transition-colors"
+          >
+            + Registrar métricas
+          </button>
         </Card>
 
         <Card title="Actividad reciente">
@@ -406,6 +416,14 @@ function InicioPage() {
       </div>
 
     </div>
+
+    <ModalRegistrarMetrica
+      open={modalMetrica}
+      onClose={() => setModalMetrica(false)}
+      onSaved={() => { setModalMetrica(false); cargarDatos() }}
+      ultimaMetrica={ultimaMetrica}
+    />
+    </>
   )
 }
 

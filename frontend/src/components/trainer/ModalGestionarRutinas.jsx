@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react'
 import { X, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Calendar, Pencil, Pause, Check, Play } from 'lucide-react'
 import { assignmentsApi, routinesApi } from '../../services/api'
+import { formatDate } from '../../utils/date'
+import Spinner from '../shared/Spinner'
+import ModalSeleccionarRutina from './ModalSeleccionarRutina'
+import ModalAsignarRutina from './ModalAsignarRutina'
 
 const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
@@ -34,12 +38,6 @@ function diasEnMes(anio, mes) {
   return new Date(anio, mes, 0).getDate()
 }
 
-function formatDate(str) {
-  if (!str) return '—'
-  const [y, m, d] = str.split('-')
-  return `${d}/${m}/${y}`
-}
-
 export default function ModalGestionarRutinas({
   isOpen,
   onClose,
@@ -61,17 +59,18 @@ export default function ModalGestionarRutinas({
   const [saving,        setSaving]        = useState(null)
   const [loading,       setLoading]       = useState(false)
   const [error,         setError]         = useState('')
-  const [mostrandoNueva, setMostrandoNueva] = useState(false)
-  const [nuevaForm,     setNuevaForm]     = useState({ id_rutina: '', fecha_inicio: '', fecha_fin: '', notas: '' })
-  const [todasRutinas,  setTodasRutinas]  = useState([])
-  const [creando,       setCreando]       = useState(false)
+  const [showSeleccionar,  setShowSeleccionar]  = useState(false)
+  const [showAsignar,      setShowAsignar]      = useState(false)
+  const [rutinaParaAsignar, setRutinaParaAsignar] = useState(null)
 
   useEffect(() => {
     if (!isOpen) return
     setTab('ACTIVA')
     setExpandidos(new Set())
     setEditandoId(null)
-    setMostrandoNueva(false)
+    setShowSeleccionar(false)
+    setShowAsignar(false)
+    setRutinaParaAsignar(null)
     setError('')
     cargar()
   }, [isOpen, clienteId])
@@ -165,37 +164,22 @@ export default function ModalGestionarRutinas({
     }
   }
 
-  async function abrirNuevaAsignacion() {
-    setMostrandoNueva(true)
-    setNuevaForm({ id_rutina: '', fecha_inicio: '', fecha_fin: '', notas: '' })
-    if (todasRutinas.length === 0) {
-      try {
-        const data = await routinesApi.getRoutines()
-        setTodasRutinas(Array.isArray(data) ? data.filter(r => !r.archivado) : [])
-      } catch {}
-    }
+  function abrirNuevaAsignacion() {
+    setShowSeleccionar(true)
   }
 
-  async function crearAsignacion() {
-    if (!nuevaForm.id_rutina || !nuevaForm.fecha_inicio || !nuevaForm.fecha_fin) return
-    setCreando(true)
-    setError('')
-    try {
-      await assignmentsApi.createAssignment(clienteId, {
-        id_rutina:    parseInt(nuevaForm.id_rutina),
-        fecha_inicio: nuevaForm.fecha_inicio,
-        fecha_fin:    nuevaForm.fecha_fin,
-        notas:        nuevaForm.notas || undefined,
-      })
-      setMostrandoNueva(false)
-      setBloquesCache({})
-      await cargar()
-      onActualizacion?.()
-    } catch (err) {
-      setError(err.message || 'Error al crear asignación')
-    } finally {
-      setCreando(false)
-    }
+  function onRutinaSelected(rutina) {
+    setRutinaParaAsignar(rutina)
+    setShowSeleccionar(false)
+    setShowAsignar(true)
+  }
+
+  async function onAsignacionCreada() {
+    setShowAsignar(false)
+    setRutinaParaAsignar(null)
+    setBloquesCache({})
+    await cargar()
+    onActualizacion?.()
   }
 
   function cambiarMesAsignacion(id, delta) {
@@ -222,6 +206,7 @@ export default function ModalGestionarRutinas({
   if (!isOpen) return null
 
   return (
+    <>
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
 
@@ -280,80 +265,11 @@ export default function ModalGestionarRutinas({
         {/* Body */}
         <div className="overflow-y-auto flex-1 p-6 flex flex-col gap-4">
 
-          {/* Form nueva asignación */}
-          {mostrandoNueva && (
-            <div className="border border-[#1D7FD8]/30 rounded-xl p-4 bg-blue-50/40 flex flex-col gap-3">
-              <p className="text-sm font-semibold text-gray-700">Nueva asignación</p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="col-span-2 flex flex-col gap-1">
-                  <label className="text-xs font-medium text-gray-500">Rutina</label>
-                  <select
-                    value={nuevaForm.id_rutina}
-                    onChange={e => setNuevaForm(f => ({ ...f, id_rutina: e.target.value }))}
-                    className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#1D7FD8]/30 bg-white"
-                  >
-                    <option value="">Selecciona una rutina…</option>
-                    {todasRutinas.map(r => (
-                      <option key={r.id_rutina} value={r.id_rutina}>{r.nombre}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-gray-500">Fecha inicio</label>
-                  <input
-                    type="date"
-                    value={nuevaForm.fecha_inicio}
-                    onChange={e => setNuevaForm(f => ({ ...f, fecha_inicio: e.target.value }))}
-                    className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D7FD8]/30"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-gray-500">Fecha fin</label>
-                  <input
-                    type="date"
-                    value={nuevaForm.fecha_fin}
-                    onChange={e => setNuevaForm(f => ({ ...f, fecha_fin: e.target.value }))}
-                    className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D7FD8]/30"
-                  />
-                </div>
-                <div className="col-span-2 flex flex-col gap-1">
-                  <label className="text-xs font-medium text-gray-500">Notas (opcional)</label>
-                  <input
-                    type="text"
-                    value={nuevaForm.notas}
-                    onChange={e => setNuevaForm(f => ({ ...f, notas: e.target.value }))}
-                    placeholder="Observaciones sobre esta asignación"
-                    className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1D7FD8]/30"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => setMostrandoNueva(false)}
-                  className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={crearAsignacion}
-                  disabled={creando || !nuevaForm.id_rutina || !nuevaForm.fecha_inicio || !nuevaForm.fecha_fin}
-                  className="px-4 py-1.5 bg-[#1D7FD8] text-white text-sm font-semibold rounded-lg hover:bg-[#1a72c4] disabled:opacity-50 transition-colors"
-                >
-                  {creando ? 'Creando…' : 'Crear asignación'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {loading && (
-            <div className="flex justify-center py-10">
-              <span className="w-6 h-6 border-4 border-[#1D7FD8] border-t-transparent rounded-full animate-spin" />
-            </div>
-          )}
+          {loading && <Spinner className="py-10" />}
 
           {error && <p className="text-sm text-red-500">{error}</p>}
 
-          {!loading && visibles.length === 0 && !mostrandoNueva && (
+          {!loading && visibles.length === 0 && (
             <p className="text-sm text-gray-400 text-center py-10">
               No hay asignaciones {tab === 'ACTIVA' ? 'activas' : tab === 'PAUSADA' ? 'pausadas' : 'finalizadas'}.
             </p>
@@ -658,5 +574,21 @@ export default function ModalGestionarRutinas({
 
       </div>
     </div>
+
+    <ModalSeleccionarRutina
+      isOpen={showSeleccionar}
+      onClose={() => setShowSeleccionar(false)}
+      clienteNombre={clienteNombre}
+      onSelect={onRutinaSelected}
+    />
+
+    <ModalAsignarRutina
+      isOpen={showAsignar}
+      onClose={() => { setShowAsignar(false); setRutinaParaAsignar(null) }}
+      onSuccess={onAsignacionCreada}
+      rutina={rutinaParaAsignar}
+      clientePrefijado={{ id: clienteId, nombre: clienteNombre, email: clienteEmail }}
+    />
+    </>
   )
 }

@@ -112,7 +112,7 @@ function ClientesPage() {
   return (
     <div className="p-8 flex flex-col gap-6">
 
-      <h1 className="text-3xl font-black text-gray-900">Clientes</h1>
+      <h1 className="text-4xl font-black text-gray-900">Clientes</h1>
 
       <div className="flex flex-wrap gap-3 items-end">
         <div className="flex-1 min-w-40">

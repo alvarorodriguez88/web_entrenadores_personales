@@ -1,49 +1,19 @@
 import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { exercisesApi, routinesApi } from '../../services/api'
+import {
+  DIA_CONFIG, OBJETIVO_OPTIONS, NIVEL_OPTIONS, inputCls, numInputCls, newEjercicio,
+} from '../../utils/rutinas'
 
-const DIA_CONFIG = {
-  1: { abrev: 'Lu', nombre: 'Lunes',     color: '#1D7FD8', bg: '#EFF6FF', border: '#BFDBFE' },
-  2: { abrev: 'Ma', nombre: 'Martes',    color: '#16a34a', bg: '#F0FDF4', border: '#BBF7D0' },
-  3: { abrev: 'Mi', nombre: 'Miércoles', color: '#0891b2', bg: '#ECFEFF', border: '#A5F3FC' },
-  4: { abrev: 'Ju', nombre: 'Jueves',    color: '#7c3aed', bg: '#F5F3FF', border: '#DDD6FE' },
-  5: { abrev: 'Vi', nombre: 'Viernes',   color: '#ea580c', bg: '#FFF7ED', border: '#FED7AA' },
-  6: { abrev: 'Sá', nombre: 'Sábado',    color: '#db2777', bg: '#FDF2F8', border: '#FBCFE8' },
-  7: { abrev: 'Do', nombre: 'Domingo',   color: '#64748b', bg: '#F8FAFC', border: '#E2E8F0' },
-}
-
-const OBJETIVO_OPTIONS = [
-  { value: 'Hipertrofia',    label: 'Hipertrofia'    },
-  { value: 'Fuerza',         label: 'Fuerza'         },
-  { value: 'Pérdida de peso',label: 'Pérdida de peso'},
-  { value: 'Resistencia',    label: 'Resistencia'    },
-  { value: 'Flexibilidad',   label: 'Flexibilidad'   },
-  { value: 'Mantenimiento',  label: 'Mantenimiento'  },
-]
-
-const NIVEL_OPTIONS = [
-  { value: 'PRINCIPIANTE', label: 'Principiante' },
-  { value: 'INTERMEDIO',   label: 'Intermedio'   },
-  { value: 'AVANZADO',     label: 'Avanzado'     },
-]
-
-const emptyForm    = { nombre: '', objetivo: '', nivel: '', descripcion: '' }
-const newEjercicio = () => ({ id_ejercicio: '', series_plan: 3, reps_plan: 10, peso_obj: '' })
-const newBloque    = () => ({ nombre: '', ejercicios: [newEjercicio()] })
-
-const inputCls = `
-  w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800
-  placeholder:text-gray-400 outline-none transition-colors
-  focus:border-[#1D7FD8] focus:ring-1 focus:ring-[#1D7FD8]/20
-`
+const emptyForm = { nombre: '', objetivo: '', nivel: '', descripcion: '' }
 
 function ModalCrearRutina({ isOpen, onClose, onSuccess }) {
-  const [form,            setForm]            = useState(emptyForm)
+  const [form,              setForm]              = useState(emptyForm)
   const [diasSeleccionados, setDiasSeleccionados] = useState(new Set())
-  const [bloquesPorDia,   setBloquesPorDia]   = useState({})
-  const [ejerciciosDisp,  setEjerciciosDisp]  = useState([])
-  const [error,           setError]           = useState('')
-  const [saving,          setSaving]          = useState(false)
+  const [bloquesPorDia,     setBloquesPorDia]     = useState({})
+  const [ejerciciosDisp,    setEjerciciosDisp]    = useState([])
+  const [error,             setError]             = useState('')
+  const [saving,            setSaving]            = useState(false)
 
   useEffect(() => {
     if (!isOpen) return
@@ -57,7 +27,6 @@ function ModalCrearRutina({ isOpen, onClose, onSuccess }) {
     label: e.nombre,
   }))
 
-  // Counters for subtitle
   const totalDias       = diasSeleccionados.size
   const totalEjercicios = Object.values(bloquesPorDia).reduce(
     (sum, b) => sum + b.ejercicios.filter((e) => e.id_ejercicio).length,
@@ -74,7 +43,7 @@ function ModalCrearRutina({ isOpen, onClose, onSuccess }) {
         setBloquesPorDia((p) => { const q = { ...p }; delete q[dia]; return q })
       } else {
         next.add(dia)
-        setBloquesPorDia((p) => ({ ...p, [dia]: newBloque() }))
+        setBloquesPorDia((p) => ({ ...p, [dia]: { nombre: '', ejercicios: [newEjercicio()] } }))
       }
       return next
     })
@@ -133,7 +102,7 @@ function ModalCrearRutina({ isOpen, onClose, onSuccess }) {
       for (const dia of [1, 2, 3, 4, 5, 6, 7]) {
         if (!diasSeleccionados.has(dia)) continue
         const bloque = bloquesPorDia[dia]
-        const block = await routinesApi.createBlock(rutina.id_rutina, {
+        const block  = await routinesApi.createBlock(rutina.id_rutina, {
           numero_dia: dia,
           nombre:     bloque.nombre || null,
         })
@@ -192,7 +161,6 @@ function ModalCrearRutina({ isOpen, onClose, onSuccess }) {
           <section className="flex flex-col gap-4">
             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Datos de la rutina</p>
 
-            {/* Fila: Nombre · Objetivo · Nivel */}
             <div className="grid grid-cols-3 gap-3">
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Nombre</label>
@@ -231,7 +199,6 @@ function ModalCrearRutina({ isOpen, onClose, onSuccess }) {
               </div>
             </div>
 
-            {/* Descripción */}
             <textarea
               className={`${inputCls} resize-none`}
               rows={3}
@@ -248,11 +215,10 @@ function ModalCrearRutina({ isOpen, onClose, onSuccess }) {
               <p className="text-sm text-gray-400">Selecciona los días en los que se entrena esta rutina</p>
             </div>
 
-            {/* Botones de día */}
             <div className="grid grid-cols-7 gap-2">
               {[1, 2, 3, 4, 5, 6, 7].map((dia) => {
-                const cfg       = DIA_CONFIG[dia]
-                const selected  = diasSeleccionados.has(dia)
+                const cfg      = DIA_CONFIG[dia]
+                const selected = diasSeleccionados.has(dia)
                 return (
                   <button
                     key={dia}
@@ -279,7 +245,7 @@ function ModalCrearRutina({ isOpen, onClose, onSuccess }) {
             </div>
           </section>
 
-          {/* Tarjetas de bloque (una por día seleccionado, ordenadas) */}
+          {/* Tarjetas de bloque */}
           {[1, 2, 3, 4, 5, 6, 7].filter((d) => diasSeleccionados.has(d)).map((dia) => {
             const cfg    = DIA_CONFIG[dia]
             const bloque = bloquesPorDia[dia]
@@ -290,7 +256,6 @@ function ModalCrearRutina({ isOpen, onClose, onSuccess }) {
                 className="rounded-xl overflow-hidden flex-shrink-0"
                 style={{ border: `1px solid ${cfg.border}`, backgroundColor: cfg.bg }}
               >
-                {/* Cabecera del bloque */}
                 <div className="flex items-center gap-3 px-4 py-3">
                   <span
                     className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
@@ -307,15 +272,13 @@ function ModalCrearRutina({ isOpen, onClose, onSuccess }) {
                   />
                   <button
                     onClick={() => toggleDia(dia)}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-white/60 transition-colors shrink-0"
+                    className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 bg-white/70 hover:bg-white/90 transition-colors shrink-0"
                   >
                     <X size={14} />
                   </button>
                 </div>
 
-                {/* Tabla de ejercicios */}
                 <div className="bg-white px-4 pb-4">
-                  {/* Cabecera tabla */}
                   <div className="grid gap-2 mb-2 pt-3 border-t border-gray-100"
                     style={{ gridTemplateColumns: '1fr 80px 80px 96px 24px' }}>
                     <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Ejercicio</span>
@@ -325,7 +288,6 @@ function ModalCrearRutina({ isOpen, onClose, onSuccess }) {
                     <span />
                   </div>
 
-                  {/* Filas */}
                   <div className="flex flex-col gap-2">
                     {bloque.ejercicios.map((ej, ei) => (
                       <div key={ei} className="grid gap-2 items-center"
@@ -340,33 +302,19 @@ function ModalCrearRutina({ isOpen, onClose, onSuccess }) {
                             <option key={o.value} value={o.value}>{o.label}</option>
                           ))}
                         </select>
-                        <input
-                          type="number"
-                          min="1"
-                          className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 text-center outline-none focus:border-[#1D7FD8] transition-colors"
+                        <input type="number" min="1" className={numInputCls}
                           value={ej.series_plan}
-                          onChange={(e) => updateEjercicio(dia, ei, 'series_plan', e.target.value)}
-                        />
-                        <input
-                          type="number"
-                          min="1"
-                          className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 text-center outline-none focus:border-[#1D7FD8] transition-colors"
+                          onChange={(e) => updateEjercicio(dia, ei, 'series_plan', e.target.value)} />
+                        <input type="number" min="1" className={numInputCls}
                           value={ej.reps_plan}
-                          onChange={(e) => updateEjercicio(dia, ei, 'reps_plan', e.target.value)}
-                        />
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.5"
-                          className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 text-center outline-none focus:border-[#1D7FD8] transition-colors"
-                          placeholder="—"
-                          value={ej.peso_obj}
-                          onChange={(e) => updateEjercicio(dia, ei, 'peso_obj', e.target.value)}
-                        />
+                          onChange={(e) => updateEjercicio(dia, ei, 'reps_plan', e.target.value)} />
+                        <input type="number" min="0" step="0.5" className={numInputCls}
+                          placeholder="—" value={ej.peso_obj}
+                          onChange={(e) => updateEjercicio(dia, ei, 'peso_obj', e.target.value)} />
                         <button
                           onClick={() => removeEjercicio(dia, ei)}
                           disabled={bloque.ejercicios.length === 1}
-                          className="flex items-center justify-center text-gray-300 hover:text-gray-500 disabled:opacity-0 disabled:pointer-events-none transition-colors"
+                          className="flex items-center justify-center text-gray-300 hover:text-gray-500 disabled:opacity-30 disabled:pointer-events-none transition-colors"
                         >
                           <X size={14} />
                         </button>
@@ -376,7 +324,7 @@ function ModalCrearRutina({ isOpen, onClose, onSuccess }) {
 
                   <button
                     onClick={() => addEjercicio(dia)}
-                    className="mt-3 text-sm font-semibold text-[#1D7FD8] hover:underline"
+                    className="mt-3 text-sm font-semibold hover:underline"
                     style={{ color: cfg.color }}
                   >
                     + Añadir ejercicio

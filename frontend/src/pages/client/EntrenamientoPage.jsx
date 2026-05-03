@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Play, Video, Clock, ChevronRight, Lightbulb } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Play, Video, Clock, ChevronRight, Lightbulb, Check } from 'lucide-react'
 import Modal  from '../../components/shared/Modal'
 import { analyticsApi } from '../../services/api'
 
@@ -60,6 +61,7 @@ function EjercicioCard({ ejercicio, index, onClick }) {
 }
 
 function EntrenamientoPage() {
+  const navigate = useNavigate()
   const [workouts,        setWorkouts]        = useState([])
   const [loading,         setLoading]         = useState(true)
   const [error,           setError]           = useState('')
@@ -160,16 +162,33 @@ function EntrenamientoPage() {
 
               <hr className="border-gray-100" />
 
-              {/* Zona inferior: objetivo + botón */}
+              {/* Zona inferior: objetivo + estado/botón */}
               <div className="px-6 py-4 flex items-center justify-between gap-4">
                 <p className="text-sm text-gray-500">
                   {workout.ejercicios?.length ?? 0} ejercicios
                   {workout.objetivo_rutina && ` · ${workout.objetivo_rutina}`}
                 </p>
-                <button className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1D7FD8] text-white text-sm font-semibold hover:bg-[#1a6fc0] transition-colors shrink-0">
-                  <Play size={14} fill="white" strokeWidth={0} />
-                  Comenzar sesión
-                </button>
+                {workout.sesion_hoy ? (
+                  <div className="flex items-center gap-2 flex-wrap bg-green-50 border border-green-100 rounded-xl px-4 py-2.5 shrink-0">
+                    <Check size={14} className="text-green-600 shrink-0" />
+                    <span className="text-sm font-semibold text-green-700">Completada hoy</span>
+                    {workout.sesion_hoy.duracion_min != null && (
+                      <span className="text-xs text-gray-400">· {workout.sesion_hoy.duracion_min} min</span>
+                    )}
+                    <span className="text-xs text-gray-400">· RPE {workout.sesion_hoy.esfuerzo_rpe}/10</span>
+                    {workout.sesion_hoy.conformidad != null && (
+                      <span className="text-xs text-gray-400">· Conformidad {workout.sesion_hoy.conformidad / 10}/10</span>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => navigate('/client/sesion', { state: { workout } })}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1D7FD8] text-white text-sm font-semibold hover:bg-[#1a6fc0] transition-colors shrink-0"
+                  >
+                    <Play size={14} fill="white" strokeWidth={0} />
+                    Comenzar sesión
+                  </button>
+                )}
               </div>
             </div>
 
