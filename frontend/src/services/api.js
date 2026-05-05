@@ -1,4 +1,5 @@
 const API_BASE = 'http://localhost:8080/api/v1'
+export const MEDIA_BASE = 'http://localhost:8080/media'
 
 
 function getAuthHeaders() {
@@ -80,6 +81,10 @@ export const usersApi = {
 
   getClientById(id) {
     return request(`/users/clients/${id}`)
+  },
+
+  createClient(data) {
+    return request('/users/clients', { method: 'POST', body: data })
   },
 }
 
@@ -376,6 +381,36 @@ export const analyticsApi = {
 
   getClientRecentActivity() {
     return request('/analytics/client/recent-activity')
+  },
+}
+
+
+export const multimediaApi = {
+  getFiles() {
+    return request('/multimedia')
+  },
+
+  async uploadFile(file) {
+    const formData = new FormData()
+    formData.append('file', file)
+    const headers = getAuthHeaders()
+    const res = await fetch(`${API_BASE}/multimedia/upload`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    })
+    if (res.status === 204) return null
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.detail || `Error ${res.status}`)
+    return data
+  },
+
+  getFileUsage(id) {
+    return request(`/multimedia/${id}/usage`)
+  },
+
+  deleteFile(id) {
+    return request(`/multimedia/${id}`, { method: 'DELETE' })
   },
 }
 

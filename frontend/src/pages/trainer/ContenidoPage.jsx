@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Upload, Dumbbell, ClipboardList, Film, Image as ImageIcon, Archive, ArchiveRestore, Hash, Plus, Search } from 'lucide-react'
-import { exercisesApi, routinesApi } from '../../services/api'
+import { Upload, Dumbbell, ClipboardList, Image as ImageIcon, Archive, ArchiveRestore, Hash, Plus, Search, Play } from 'lucide-react'
+import { exercisesApi, routinesApi, multimediaApi, MEDIA_BASE } from '../../services/api'
 import TabBar              from '../../components/shared/TabBar'
 import Table               from '../../components/shared/Table'
 import Modal               from '../../components/shared/Modal'
 import Button              from '../../components/shared/Button'
 import Input               from '../../components/shared/Input'
-import ModalCrearEjercicio    from '../../components/trainer/ModalCrearEjercicio'
-import ModalDetalleEjercicio  from '../../components/trainer/ModalDetalleEjercicio'
-import ModalCrearRutina       from '../../components/trainer/ModalCrearRutina'
-import ModalDetalleRutina     from '../../components/trainer/ModalDetalleRutina'
-import ModalAsignarRutina     from '../../components/trainer/ModalAsignarRutina'
+import ModalCrearEjercicio                  from '../../components/trainer/ModalCrearEjercicio'
+import ModalDetalleEjercicio                from '../../components/trainer/ModalDetalleEjercicio'
+import ModalCrearRutina                     from '../../components/trainer/ModalCrearRutina'
+import ModalDetalleRutina                   from '../../components/trainer/ModalDetalleRutina'
+import ModalAsignarRutina                   from '../../components/trainer/ModalAsignarRutina'
+import ModalDetalleMultimedia               from '../../components/trainer/ModalDetalleMultimedia'
+import ModalConfirmarEliminarMultimedia     from '../../components/trainer/ModalConfirmarEliminarMultimedia'
 
 const TABS = ['Ejercicios', 'Rutinas', 'Multimedia']
 
@@ -436,124 +438,261 @@ function TabRutinas() {
 // PESTAÑA MULTIMEDIA
 // ─────────────────────────────────────────────────────────────────
 
-// TODO: sustituir por GET multimedia cuando exista el endpoint
-const multimediaMock = [
-  { id: 1, nombre: 'Press banca técnica', tipo: 'Vídeo', tamaño: '12 MB', asociado: 'Press banca' },
-  { id: 2, nombre: 'Sentadilla guía',     tipo: 'Vídeo', tamaño: '8 MB',  asociado: 'Sentadilla'  },
-  { id: 3, nombre: 'Postura plancha',     tipo: 'Foto',  tamaño: '2 MB',  asociado: 'Plancha'     },
-  { id: 4, nombre: 'Pull-up progresión',  tipo: 'Vídeo', tamaño: '15 MB', asociado: 'Pull-up'     },
-]
-
-const emptyMediaForm = { nombre: '', url: '' }
-
-const TIPO_CONFIG = {
-  'Vídeo': { icon: Film,       bg: 'from-blue-50 to-blue-100',   badge: 'bg-blue-100 text-[#1D7FD8]'  },
-  'Foto':  { icon: ImageIcon,  bg: 'from-green-50 to-green-100', badge: 'bg-green-100 text-green-700' },
+function formatBytes(bytes) {
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-function tipoConfig(tipo) {
-  return TIPO_CONFIG[tipo] ?? { icon: Upload, bg: 'from-gray-50 to-gray-100', badge: 'bg-gray-100 text-gray-500' }
-}
+function MediaCard({ item, onOpen }) {
+  const [imgError, setImgError] = useState(false)
+  const esVideo = item.tipo === 'VIDEO'
 
-function MediaCard({ item }) {
-  const cfg = tipoConfig(item.tipo)
-  const Icon = cfg.icon
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden flex flex-col hover:shadow-md transition-shadow">
-      <div className={`h-32 bg-gradient-to-br ${cfg.bg} flex items-center justify-center relative`}>
-        <Icon size={36} className="text-gray-300" />
-        <span className={`absolute top-3 right-3 text-xs font-semibold px-2 py-0.5 rounded-full ${cfg.badge}`}>
-          {item.tipo}
-        </span>
+    <div
+      onClick={() => onOpen(item)}
+      className="bg-white border border-gray-100 rounded-2xl overflow-hidden flex flex-col hover:shadow-md transition-shadow cursor-pointer"
+    >
+      {/* Thumbnail */}
+      <div className="relative h-36 overflow-hidden">
+        {esVideo ? (
+          <div className="w-full h-full bg-gray-950 flex items-center justify-center">
+            <div className="w-14 h-14 rounded-full bg-white shadow-lg flex items-center justify-center">
+              <Play size={22} className="text-[#1D7FD8] ml-1" fill="currentColor" />
+            </div>
+            <span className="absolute top-2.5 left-2.5 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded">
+              VIDEO
+            </span>
+          </div>
+        ) : (
+          <div className="w-full h-full bg-green-50 flex items-center justify-center">
+            {!imgError ? (
+              <img
+                src={`${MEDIA_BASE}/${item.nombre_archivo}`}
+                alt={item.nombre_original}
+                className="w-full h-full object-cover"
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              <ImageIcon size={36} className="text-green-300" />
+            )}
+            <span className="absolute top-2.5 left-2.5 bg-green-100 text-green-700 border border-green-200 text-[10px] font-bold px-2 py-0.5 rounded">
+              IMAGEN
+            </span>
+          </div>
+        )}
       </div>
-      <div className="p-4 flex flex-col gap-1.5">
-        <p className="font-semibold text-sm text-gray-900 truncate">{item.nombre}</p>
-        <div className="flex items-center justify-between text-xs text-gray-400">
-          <span>{item.tamaño}</span>
-          <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md">{item.asociado}</span>
-        </div>
+
+      {/* Info */}
+      <div className="p-3 flex flex-col gap-1">
+        <p className="font-semibold text-sm text-gray-900 leading-snug line-clamp-2" title={item.nombre_original}>
+          {item.nombre_original}
+        </p>
+        <p className="text-xs text-gray-400">
+          {formatBytes(item.tamano_bytes)} · {new Date(item.fecha_subida).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+        </p>
       </div>
     </div>
   )
 }
 
+const PILLS = [
+  { key: '',       label: 'Todos',    dot: null,           activeClass: 'bg-gray-900 text-white' },
+  { key: 'VIDEO',  label: 'Vídeos',   dot: 'bg-[#1D7FD8]', activeClass: 'bg-[#1D7FD8]/10 text-[#1D7FD8]' },
+  { key: 'IMAGEN', label: 'Imágenes', dot: 'bg-green-500',  activeClass: 'bg-green-50 text-green-700' },
+]
+
 function TabMultimedia() {
-  const [filtroTipo,   setFiltroTipo]   = useState('')
-  const [filtroEj,     setFiltroEj]     = useState('')
-  const [modalAbierto, setModalAbierto] = useState(false)
-  const [form,         setForm]         = useState(emptyMediaForm)
-  const [error,        setError]        = useState('')
+  const [archivos,      setArchivos]      = useState([])
+  const [loading,       setLoading]       = useState(true)
+  const [error,         setError]         = useState('')
+  const [busqueda,      setBusqueda]      = useState('')
+  const [filtroTipo,    setFiltroTipo]    = useState('')
+  const [uploadModal,   setUploadModal]   = useState(false)
+  const [selectedFile,  setSelectedFile]  = useState(null)
+  const [uploading,     setUploading]     = useState(false)
+  const [uploadError,   setUploadError]   = useState('')
+  const [deleting,      setDeleting]      = useState(new Set())
+  const [confirmDelete, setConfirmDelete] = useState(null)
+  const [selectedMedia, setSelectedMedia] = useState(null)
 
-  const filtrados = multimediaMock.filter((m) =>
-    (!filtroTipo || m.tipo.toLowerCase().includes(filtroTipo.toLowerCase())) &&
-    (!filtroEj   || m.asociado.toLowerCase().includes(filtroEj.toLowerCase()))
-  )
-
-  function cerrar() { setModalAbierto(false); setForm(emptyMediaForm); setError('') }
-
-  function handleGuardar() {
-    if (!form.nombre.trim() || !form.url.trim()) { setError('Nombre y URL son obligatorios'); return }
-    // TODO: conectar con endpoint de multimedia cuando exista
-    cerrar()
+  async function cargarArchivos() {
+    setLoading(true); setError('')
+    try {
+      const data = await multimediaApi.getFiles()
+      setArchivos(data)
+    } catch (err) {
+      setError(err.message || 'Error al cargar archivos')
+    } finally {
+      setLoading(false)
+    }
   }
+
+  useEffect(() => { cargarArchivos() }, [])
+
+  function cerrarUpload() { setUploadModal(false); setSelectedFile(null); setUploadError('') }
+
+  async function handleSubir() {
+    if (!selectedFile) { setUploadError('Selecciona un archivo'); return }
+    setUploading(true); setUploadError('')
+    try {
+      await multimediaApi.uploadFile(selectedFile)
+      cargarArchivos()
+      cerrarUpload()
+    } catch (err) {
+      setUploadError(err.message || 'Error al subir el archivo')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  async function handleEliminar(item) {
+    try {
+      const usage = await multimediaApi.getFileUsage(item.id_archivo)
+      setConfirmDelete({ item, usage })
+    } catch {
+      setConfirmDelete({ item, usage: { total: 0, ejercicios: [] } })
+    }
+  }
+
+  async function confirmarEliminar() {
+    if (!confirmDelete) return
+    const id = confirmDelete.item.id_archivo
+    setDeleting(prev => new Set([...prev, id]))
+    setConfirmDelete(null)
+    try {
+      await multimediaApi.deleteFile(id)
+      setArchivos(prev => prev.filter(a => a.id_archivo !== id))
+    } catch {
+      // silencioso — el estado local no cambia
+    } finally {
+      setDeleting(prev => { const s = new Set(prev); s.delete(id); return s })
+    }
+  }
+
+  const counts = {
+    '':       archivos.length,
+    'VIDEO':  archivos.filter(a => a.tipo === 'VIDEO').length,
+    'IMAGEN': archivos.filter(a => a.tipo === 'IMAGEN').length,
+  }
+
+  const filtrados = archivos.filter((a) =>
+    (!filtroTipo || a.tipo === filtroTipo) &&
+    (!busqueda   || a.nombre_original.toLowerCase().includes(busqueda.toLowerCase()))
+  )
 
   return (
     <>
-      <div className="flex flex-wrap gap-3 items-end">
-        <div className="w-44">
-          <Input placeholder="Tipo de archivo"    value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)} />
+      {/* Fila 1: búsqueda + subir */}
+      <div className="flex gap-3 items-center">
+        <div className="flex-1 relative">
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          <input
+            placeholder="Buscar archivo"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            className="w-full bg-white border border-gray-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:border-[#1D7FD8] transition-colors"
+          />
         </div>
-        <div className="flex-1 min-w-36">
-          <Input placeholder="Ejercicio asociado" value={filtroEj}   onChange={(e) => setFiltroEj(e.target.value)} />
-        </div>
-        <Button onClick={() => setModalAbierto(true)}>Subir archivo</Button>
+        <Button onClick={() => setUploadModal(true)}>
+          <Upload size={15} />
+          Subir archivo
+        </Button>
+      </div>
+
+      {/* Fila 2: pills de filtro */}
+      <div className="flex items-center gap-2 flex-wrap mt-3">
+        {PILLS.map(p => (
+          <button
+            key={p.key}
+            onClick={() => setFiltroTipo(p.key)}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold transition-colors ${
+              filtroTipo === p.key
+                ? p.activeClass
+                : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
+            }`}
+          >
+            {p.dot && <span className={`w-2 h-2 rounded-full ${p.dot}`} />}
+            {p.label}
+            <span className="text-xs opacity-70">{counts[p.key]}</span>
+          </button>
+        ))}
       </div>
 
       <div className="mt-4">
-        <div className="flex items-center gap-2 mb-3">
-          <p className="text-sm font-semibold text-gray-700">Contenido multimedia</p>
-          <span className="text-xs font-semibold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-            {filtrados.length}
-          </span>
-        </div>
-        {filtrados.length === 0 ? (
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <span className="w-7 h-7 border-4 border-[#1D7FD8] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : error ? (
+          <p className="text-sm text-red-500 py-8 text-center">{error}</p>
+        ) : filtrados.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-16 text-gray-300">
             <Upload size={36} />
             <p className="text-sm">No se encontró contenido multimedia</p>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-4">
-            {filtrados.map((m) => <MediaCard key={m.id} item={m} />)}
+          <div className="grid grid-cols-4 gap-4">
+            {filtrados.map((a) => (
+              <MediaCard
+                key={a.id_archivo}
+                item={a}
+                onOpen={setSelectedMedia}
+              />
+            ))}
           </div>
         )}
       </div>
 
-      <Modal isOpen={modalAbierto} onClose={cerrar} title="Subir archivo">
+      {/* Modal subir archivo */}
+      <Modal isOpen={uploadModal} onClose={cerrarUpload} title="Subir archivo">
         <div className="flex flex-col gap-4">
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Datos del archivo</p>
-            <Input placeholder="Nombre del archivo" value={form.nombre} onChange={(e) => setForm((p) => ({ ...p, nombre: e.target.value }))} />
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Selecciona un archivo</p>
+          <div
+            className="border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center gap-3 bg-gray-50 cursor-pointer hover:border-[#1D7FD8] transition-colors"
+            onClick={() => document.getElementById('media-file-input').click()}
+          >
+            <Upload size={28} className={selectedFile ? 'text-[#1D7FD8]' : 'text-gray-300'} />
+            {selectedFile ? (
+              <div className="text-center">
+                <p className="text-sm font-medium text-gray-800">{selectedFile.name}</p>
+                <p className="text-xs text-gray-400">{formatBytes(selectedFile.size)}</p>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-gray-500">Haz clic para seleccionar</p>
+                <p className="text-xs text-gray-400">Vídeos e imágenes</p>
+              </>
+            )}
           </div>
-
-          {/* Área visual drag & drop — el backend almacena URLs, no binarios */}
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Contenido multimedia</p>
-            <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center gap-2 text-gray-400 mb-3 bg-gray-50">
-              <Upload size={28} />
-              <p className="text-sm">Sube el archivo</p>
-              <p className="text-xs text-gray-300">El backend almacena la URL, no el fichero</p>
-            </div>
-            {/* TODO: cuando exista almacenamiento real, reemplazar por un input[type=file] */}
-            <Input placeholder="URL del archivo" value={form.url} onChange={(e) => setForm((p) => ({ ...p, url: e.target.value }))} />
-          </div>
-
-          {error && <p className="text-sm text-red-500">{error}</p>}
+          <input
+            id="media-file-input"
+            type="file"
+            accept="video/*,image/*"
+            className="hidden"
+            onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+          />
+          {uploadError && <p className="text-sm text-red-500">{uploadError}</p>}
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" onClick={cerrar}>Cancelar</Button>
-            <Button onClick={handleGuardar}>Guardar</Button>
+            <Button variant="secondary" onClick={cerrarUpload}>Cancelar</Button>
+            <Button loading={uploading} onClick={handleSubir}>Subir</Button>
           </div>
         </div>
       </Modal>
+
+      <ModalDetalleMultimedia
+        isOpen={!!selectedMedia}
+        onClose={() => setSelectedMedia(null)}
+        archivo={selectedMedia}
+        onEliminar={(item) => { setSelectedMedia(null); handleEliminar(item) }}
+      />
+
+      <ModalConfirmarEliminarMultimedia
+        isOpen={!!confirmDelete}
+        onClose={() => setConfirmDelete(null)}
+        item={confirmDelete?.item ?? null}
+        usage={confirmDelete?.usage ?? null}
+        onConfirm={confirmarEliminar}
+      />
     </>
   )
 }
