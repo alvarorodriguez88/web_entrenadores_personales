@@ -2,7 +2,9 @@ from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException, status
 
 from app.models.user import Usuario, Entrenador, Cliente
-from app.schemas.user import TrainerUpdate, ClientUpdate
+from app.models.metric import MetricaFisica
+from app.schemas.user import TrainerUpdate, ClientUpdate, ClientCreate
+from app.services.auth_service import hash_password
 
 
 NIVEL_ORDER = {"PRINCIPIANTE": 1, "INTERMEDIO": 2, "AVANZADO": 3}
@@ -101,6 +103,42 @@ def update_client_nivel_if_needed(client: Cliente, rutina_nivel: str) -> None:
 
     if routine_order > current_order:
         client.nivel = rutina_nivel
+
+def create_client_for_trainer(db: Session, trainer_id: int, data: ClientCreate) -> Cliente:
+    existing = db.query(Usuario).filter(Usuario.email == data.email).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    user = Usuario(
+        email       = data.email,
+        passwd_hash = hash_password(data.password),
+        rol         = "CLIENTE",
+        nombre      = data.nombre,
+        apellidos   = data.apellidos,
+    )
+    db.add(user)
+    db.flush()
+
+    client = Cliente(
+        id_usuario    = user.id_usuario,
+        id_entrenador = trainer_id,
+        nivel         = data.nivel,
+        objetivo      = data.objetivo,
+    )
+    db.add(client)
+
+    if data.peso_kg is not None:
+        metric = MetricaFisica(
+            id_cliente = user.id_usuario,
+            peso_kg    = data.peso_kg,
+            altura_cm  = data.altura_cm,
+            grasa_pct  = data.grasa_pct,
+        )
+        db.add(metric)
+
+    db.commit()
+    db.refresh(client)
+    return client
 
 def _check_email_available(db: Session, email: str, current_user_id: int) -> None:
     existing = db.query(Usuario).filter(

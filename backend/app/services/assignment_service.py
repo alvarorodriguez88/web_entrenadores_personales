@@ -436,16 +436,11 @@ def update_assignment_exercise(db: Session, assignment_id: int, customization_id
         db, assignment_id, customization_id, trainer_id, is_trainer=True
     )
 
-    if data.series_plan is not None:
-        customization.series_plan = data.series_plan
-    if data.reps_plan is not None:
-        customization.reps_plan = data.reps_plan
-    if data.peso_obj is not None:
-        customization.peso_obj = data.peso_obj
-    if data.descanso_seg is not None:
-        customization.descanso_seg = data.descanso_seg
-    if data.notas is not None:
-        customization.notas = data.notas
+    customization.series_plan  = data.series_plan
+    customization.reps_plan    = data.reps_plan
+    customization.peso_obj     = data.peso_obj
+    customization.descanso_seg = data.descanso_seg
+    customization.notas        = data.notas
 
     db.commit()
     db.refresh(customization)
@@ -459,35 +454,35 @@ def delete_assignment_exercise(db: Session, assignment_id: int, customization_id
     db.commit()
 
 def _calculate_session_performance(db: Session, session: SesionRutina) -> float:
+    block_exercises = db.query(BloqueRutinaEjercicio).filter(
+        BloqueRutinaEjercicio.id_bloque_rutina == session.id_bloque_rutina
+    ).all()
+
+    if not block_exercises:
+        return 0.0
+
     logs = db.query(EjercicioRealizado).filter(
         EjercicioRealizado.id_sesion == session.id_sesion_rutina
     ).all()
-
-    if not logs:
-        return 0.0
+    logs_by_ejercicio = {log.id_ejercicio: log for log in logs}
 
     exercise_scores = []
 
-    for log in logs:
-        customization = db.query(AsignacionEjercicio).join(
-            BloqueRutinaEjercicio,
-            AsignacionEjercicio.id_bloque_rutina_ej == BloqueRutinaEjercicio.id_bloque_rutina_ejercicio
-        ).filter(
-            AsignacionEjercicio.id_asignacion_rutina == session.id_asignacion,
-            BloqueRutinaEjercicio.id_ejercicio == log.id_ejercicio
-        ).first()
+    for template in block_exercises:
+        log = logs_by_ejercicio.get(template.id_ejercicio)
 
-        template = db.query(BloqueRutinaEjercicio).filter(
-            BloqueRutinaEjercicio.id_bloque_rutina == session.id_bloque_rutina,
-            BloqueRutinaEjercicio.id_ejercicio == log.id_ejercicio
-        ).first()
-
-        if not template:
+        if log is None:
+            exercise_scores.append(0.0)
             continue
 
-        series_plan = customization.series_plan if customization and customization.series_plan else template.series_plan
-        reps_plan = customization.reps_plan if customization and customization.reps_plan else template.reps_plan
-        peso_plan = customization.peso_obj if customization and customization.peso_obj else template.peso_obj
+        customization = db.query(AsignacionEjercicio).filter(
+            AsignacionEjercicio.id_asignacion_rutina == session.id_asignacion,
+            AsignacionEjercicio.id_bloque_rutina_ej  == template.id_bloque_rutina_ejercicio
+        ).first()
+
+        series_plan = (customization.series_plan if customization and customization.series_plan else None) or template.series_plan
+        reps_plan   = (customization.reps_plan   if customization and customization.reps_plan   else None) or template.reps_plan
+        peso_plan   = (customization.peso_obj     if customization and customization.peso_obj    else None) or template.peso_obj
 
         scores = []
 
@@ -501,10 +496,10 @@ def _calculate_session_performance(db: Session, session: SesionRutina) -> float:
             scores.append(min(10.0, (float(log.peso_real) / float(peso_plan)) * 10))
 
         if not scores:
+            exercise_scores.append(0.0)
             continue
 
-        exercise_score = max(1.0, sum(scores) / len(scores))
-        exercise_scores.append(exercise_score)
+        exercise_scores.append(max(1.0, sum(scores) / len(scores)))
 
     if not exercise_scores:
         return 0.0

@@ -81,6 +81,10 @@ class CalendarDayResponse(BaseModel):
 class WeeklyCalendarResponse(BaseModel):
     dias: list[CalendarDayResponse]
 
+class MultimediaSimpleResponse(BaseModel):
+    nombre_archivo:  str
+    nombre_original: str
+
 class TodayBlockExerciseResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id_ejercicio:   int
@@ -88,7 +92,8 @@ class TodayBlockExerciseResponse(BaseModel):
     grupo_muscular: Optional[str] = None
     equipamiento:   Optional[str] = None
     descripcion:    Optional[str] = None
-    video_url:      Optional[str] = None
+    video:          Optional[MultimediaSimpleResponse] = None
+    imagen:         Optional[MultimediaSimpleResponse] = None
     categorias:     list[str] = []
     series_plan:    int
     reps_plan:      int

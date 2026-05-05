@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr, ConfigDict
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Literal
 
 
 class UserBase(BaseModel):
@@ -40,3 +40,21 @@ class ClientResponse(BaseModel):
     objetivo: Optional[str] = None
     fecha_alta: datetime
     id_entrenador: int
+
+class ClientCreate(BaseModel):
+    nombre:    str
+    apellidos: str
+    email:     EmailStr
+    password:  str
+    nivel:     Optional[Literal["PRINCIPIANTE","INTERMEDIO","AVANZADO"]] = None
+    objetivo:  Optional[Literal["PERDER_PESO","GANAR_MASA","MEJORAR_RESISTENCIA","MEJORAR_FUERZA","MANTENIMIENTO"]] = None
+    peso_kg:   Optional[float] = None
+    altura_cm: Optional[float] = None
+    grasa_pct: Optional[float] = None
+
+class ClientCreateResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id_cliente: int
+    nombre:     str
+    apellidos:  str
+    email:      EmailStr

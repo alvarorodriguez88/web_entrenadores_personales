@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 import app.models
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import os
 
 from app.routers import auth, users, exercises, routines, assignments, metrics, analytics, multimedia
@@ -39,3 +40,5 @@ app.include_router(assignments.router, prefix="/api/v1/assignments", tags=["Assi
 app.include_router(metrics.router, prefix="/api/v1/metrics", tags=["Metrics"])
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytics"])
 app.include_router(multimedia.router, prefix="/api/v1/multimedia", tags=["Multimedia"])
+
+app.mount("/media", StaticFiles(directory=MEDIA_DIR), name="media")
