@@ -8,14 +8,18 @@ from app.schemas.exercise import ExerciseCreate, ExerciseUpdate, ExerciseCategor
 
 def get_exercises(db: Session, trainer_id: int) -> list[Ejercicio]:
     return db.query(Ejercicio).options(
-        joinedload(Ejercicio.categories)
+        joinedload(Ejercicio.categories),
+        joinedload(Ejercicio.video),
+        joinedload(Ejercicio.imagen)
     ).filter(
         Ejercicio.id_entrenador == trainer_id
     ).all()
 
 def get_exercise_by_id(db: Session, exercise_id: int, trainer_id: int) -> Ejercicio:
     exercise = db.query(Ejercicio).options(
-        joinedload(Ejercicio.categories)
+        joinedload(Ejercicio.categories),
+        joinedload(Ejercicio.video),
+        joinedload(Ejercicio.imagen)
     ).filter(
         Ejercicio.id_ejercicio == exercise_id,
         Ejercicio.id_entrenador == trainer_id
@@ -46,8 +50,8 @@ def create_exercise(db: Session, data: ExerciseCreate, trainer_id: int) -> Ejerc
         descripcion=data.descripcion,
         grupo_muscular=data.grupo_muscular,
         equipamiento=data.equipamiento,
-        video_url=data.video_url,
-        fotos_url=data.fotos_url,
+        id_video = data.id_video,
+        id_imagen = data.id_imagen
     )
     db.add(exercise)
     db.commit()
@@ -76,10 +80,10 @@ def update_exercise(db: Session, exercise_id: int, data: ExerciseUpdate, trainer
         exercise.grupo_muscular = data.grupo_muscular
     if data.equipamiento is not None:
         exercise.equipamiento = data.equipamiento
-    if data.video_url is not None:
-        exercise.video_url = data.video_url
-    if data.fotos_url is not None:
-        exercise.fotos_url = data.fotos_url
+    if data.id_video is not None:
+        exercise.id_video = data.id_video
+    if data.id_imagen is not None:
+        exercise.id_imagen = data.id_imagen
 
     db.commit()
     db.refresh(exercise)
