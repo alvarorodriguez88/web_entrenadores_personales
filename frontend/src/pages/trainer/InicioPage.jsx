@@ -35,34 +35,34 @@ function buildKpis(data, periodo) {
     {
       title:    'Clientes activos',
       value:    String(data.clientes_activos ?? '—'),
-      trend:    data.clientes_activos_diff != null
-                  ? `${data.clientes_activos_diff > 0 ? '+' : ''}${data.clientes_activos_diff} vs ${vs}`
+      trend:    data.clientes_activos_comparativa != null
+                  ? `${data.clientes_activos_comparativa > 0 ? '+' : ''}${data.clientes_activos_comparativa} vs ${vs}`
                   : `vs ${vs}`,
-      positive: (data.clientes_activos_diff ?? 0) >= 0,
+      positive: (data.clientes_activos_comparativa ?? 0) >= 0,
     },
     {
       title:    'Cumplimiento rutinas',
       value:    data.cumplimiento_pct != null ? `${data.cumplimiento_pct}%` : '—',
-      trend:    data.cumplimiento_pct_diff != null
-                  ? `${data.cumplimiento_pct_diff > 0 ? '+' : ''}${data.cumplimiento_pct_diff}% vs ${vs}`
+      trend:    data.cumplimiento_pct_comparativa != null
+                  ? `${data.cumplimiento_pct_comparativa > 0 ? '+' : ''}${data.cumplimiento_pct_comparativa}% vs ${vs}`
                   : `vs ${vs}`,
-      positive: (data.cumplimiento_pct_diff ?? 0) >= 0,
+      positive: (data.cumplimiento_pct_comparativa ?? 0) >= 0,
     },
     {
       title:    periodo === 'semanal' ? 'Sesiones esta semana' : 'Sesiones este mes',
       value:    String(data.sesiones_completadas ?? '—'),
-      trend:    data.sesiones_completadas_diff != null
-                  ? `${data.sesiones_completadas_diff > 0 ? '+' : ''}${data.sesiones_completadas_diff} vs ${vs}`
+      trend:    data.sesiones_completadas_comparativa != null
+                  ? `${data.sesiones_completadas_comparativa > 0 ? '+' : ''}${data.sesiones_completadas_comparativa} vs ${vs}`
                   : `vs ${vs}`,
-      positive: (data.sesiones_completadas_diff ?? 0) >= 0,
+      positive: (data.sesiones_completadas_comparativa ?? 0) >= 0,
     },
     {
       title:    'Sin actividad',
       value:    String(data.clientes_sin_actividad ?? '—'),
-      trend:    data.clientes_sin_actividad_diff != null
-                  ? `${data.clientes_sin_actividad_diff > 0 ? '+' : ''}${data.clientes_sin_actividad_diff} vs ${vs}`
+      trend:    data.clientes_sin_actividad_comparativa != null
+                  ? `${data.clientes_sin_actividad_comparativa > 0 ? '+' : ''}${data.clientes_sin_actividad_comparativa} vs ${vs}`
                   : `vs ${vs}`,
-      positive: (data.clientes_sin_actividad_diff ?? 0) <= 0,
+      positive: (data.clientes_sin_actividad_comparativa ?? 0) <= 0,
     },
   ]
 }
