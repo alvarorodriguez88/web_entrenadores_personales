@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Play, Video, Clock, ChevronRight, Lightbulb, Check } from 'lucide-react'
 import Modal  from '../../components/shared/Modal'
-import { analyticsApi } from '../../services/api'
+import { analyticsApi, MEDIA_BASE } from '../../services/api'
 
 const CATEGORIA_COLORS = {
   FUERZA:       { bg: '#EFF6FF', text: '#1D7FD8' },
@@ -281,26 +281,28 @@ function EntrenamientoPage() {
               )}
             </div>
 
-            {/* Área de vídeo */}
-            {ejercicioActivo.video_url ? (
-              <a
-                href={ejercicioActivo.video_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full h-44 rounded-2xl bg-[#0d1421] flex flex-col items-center justify-center gap-3 hover:opacity-90 transition-opacity"
-              >
-                <div className="w-14 h-14 rounded-full bg-white/15 flex items-center justify-center">
-                  <Play size={24} className="text-white" fill="white" strokeWidth={0} />
-                </div>
-                <span className="text-sm text-white/50">Vídeo demostrativo</span>
-              </a>
+            {/* Zona de media */}
+            {ejercicioActivo.video ? (
+              <video
+                controls
+                src={`${MEDIA_BASE}/${ejercicioActivo.video.nombre_archivo}`}
+                className="w-full rounded-2xl bg-[#0d1421] max-h-56"
+              />
             ) : (
               <div className="w-full h-44 rounded-2xl bg-[#0d1421] flex flex-col items-center justify-center gap-3">
                 <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center">
                   <Video size={24} className="text-white/30" strokeWidth={1.5} />
                 </div>
-                <span className="text-sm text-white/30">Vídeo demostrativo</span>
+                <span className="text-sm text-white/30">Sin vídeo demostrativo</span>
               </div>
+            )}
+
+            {ejercicioActivo.imagen && (
+              <img
+                src={`${MEDIA_BASE}/${ejercicioActivo.imagen.nombre_archivo}`}
+                alt={ejercicioActivo.imagen.nombre_original}
+                className="w-full rounded-2xl object-contain bg-gray-50 max-h-48"
+              />
             )}
 
             {/* CÓMO EJECUTARLO */}

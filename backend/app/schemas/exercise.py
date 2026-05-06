@@ -1,3 +1,4 @@
+from app.schemas.multimedia import MultimediaResponse
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional
@@ -17,16 +18,16 @@ class ExerciseCreate(BaseModel):
     descripcion: str
     grupo_muscular: Optional[str] = None
     equipamiento: Optional[str] = None
-    video_url: Optional[str] = None
-    fotos_url: Optional[str] = None
+    id_video: Optional[int] = None
+    id_imagen: Optional[int] = None
 
 class ExerciseUpdate(BaseModel):
     nombre: Optional[str] = None
     descripcion: Optional[str] = None
     grupo_muscular: Optional[str] = None
     equipamiento: Optional[str] = None
-    video_url: Optional[str] = None
-    fotos_url: Optional[str] = None
+    id_video: Optional[int] = None
+    id_imagen: Optional[int] = None
 
 class ExerciseResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -37,8 +38,8 @@ class ExerciseResponse(BaseModel):
     descripcion: str
     grupo_muscular: Optional[str] = None
     equipamiento: Optional[str] = None
-    video_url: Optional[str] = None
-    fotos_url: Optional[str] = None
+    video: Optional[MultimediaResponse] = None
+    imagen: Optional[MultimediaResponse] = None
     archivado: bool
     creado_en: datetime
     categories: list[CategoriaResponse] = []

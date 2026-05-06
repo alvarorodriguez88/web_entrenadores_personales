@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
-import { BookOpen, X, Trash2 } from 'lucide-react'
+import { BookOpen, X, Trash2, ChevronRight } from 'lucide-react'
 import { routinesApi } from '../../services/api'
+import ModalPersonalizacionCliente from './ModalPersonalizacionCliente'
 import {
   DIA_CONFIG, OBJETIVO_OPTIONS, NIVEL_OPTIONS, NIVEL_ICON, inputCls, numInputCls, newEjercicio,
 } from '../../utils/rutinas'
@@ -28,7 +29,8 @@ export default function ModalDetalleRutina({ isOpen, onClose, rutina, ejercicios
   const [bloquesEliminados,    setBloquesEliminados]    = useState([])
   const [ejerciciosEliminados, setEjerciciosEliminados] = useState({})
 
-  const [asignaciones, setAsignaciones] = useState([])
+  const [asignaciones,          setAsignaciones]          = useState([])
+  const [asignacionSeleccionada, setAsignacionSeleccionada] = useState(null)
   const [loading,   setLoading]   = useState(false)
   const [saving,    setSaving]    = useState(false)
   const [archiving, setArchiving] = useState(false)
@@ -250,6 +252,7 @@ export default function ModalDetalleRutina({ isOpen, onClose, rutina, ejercicios
   const diasOrdenados = [1, 2, 3, 4, 5, 6, 7].filter((d) => diasSeleccionados.has(d))
 
   return (
+    <>
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
       onClick={onClose}
@@ -537,10 +540,13 @@ export default function ModalDetalleRutina({ isOpen, onClose, rutina, ejercicios
               ) : (
                 asignaciones.map((a) => {
                   const est = ESTADO_BADGE[a.estado] ?? ESTADO_BADGE.INACTIVA
+                  const esEditable = a.estado === 'ACTIVA' || a.estado === 'PAUSADA'
+                  const Wrapper = esEditable ? 'button' : 'div'
                   return (
-                    <div
+                    <Wrapper
                       key={a.id_asignacion_rutina}
-                      className="flex items-center gap-3 px-4 py-3.5 border border-gray-200 rounded-xl"
+                      onClick={esEditable ? () => setAsignacionSeleccionada(a) : undefined}
+                      className={`flex items-center gap-3 px-4 py-3.5 border border-gray-200 rounded-xl w-full text-left${esEditable ? ' hover:border-[#1D7FD8]/40 hover:shadow-sm transition-all cursor-pointer' : ''}`}
                     >
                       <AvatarCircle nombre={a.nombre} apellidos={a.apellidos} />
                       <div className="flex-1 min-w-0">
@@ -555,7 +561,8 @@ export default function ModalDetalleRutina({ isOpen, onClose, rutina, ejercicios
                         <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: est.dot }} />
                         {est.label}
                       </span>
-                    </div>
+                      {esEditable && <ChevronRight size={14} className="text-gray-300 shrink-0" />}
+                    </Wrapper>
                   )
                 })
               )}
@@ -598,5 +605,13 @@ export default function ModalDetalleRutina({ isOpen, onClose, rutina, ejercicios
 
       </div>
     </div>
+
+    <ModalPersonalizacionCliente
+      isOpen={!!asignacionSeleccionada}
+      onClose={() => setAsignacionSeleccionada(null)}
+      asignacion={asignacionSeleccionada}
+      rutinaId={rutina?.id_rutina}
+    />
+    </>
   )
 }

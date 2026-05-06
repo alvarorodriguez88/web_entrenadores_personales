@@ -1,6 +1,6 @@
 import { X } from 'lucide-react'
 
-function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-lg' }) {
+function Modal({ isOpen, onClose, title, children, footer, maxWidth = 'max-w-lg', titleClassName }) {
   if (!isOpen) return null
 
   return (
@@ -14,20 +14,27 @@ function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-lg' }) {
       >
         {/* Cabecera */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-800">{title}</h2>
+          <div className={titleClassName ?? 'text-lg font-semibold text-gray-800'}>{title}</div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            className="p-1.5 rounded-lg border border-gray-200 text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
             aria-label="Cerrar"
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 
         {/* Contenido con scroll si es necesario */}
-        <div className="overflow-y-auto px-6 py-5">
+        <div className="overflow-y-auto px-6 py-5 flex-1">
           {children}
         </div>
+
+        {/* Footer fijo fuera del scroll */}
+        {footer && (
+          <div className="border-t border-gray-100">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   )

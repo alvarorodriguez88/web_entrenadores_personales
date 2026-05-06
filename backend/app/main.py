@@ -1,10 +1,15 @@
 from fastapi import FastAPI
 import app.models
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import os
 
-from app.routers import auth, users, exercises, routines, assignments, metrics, analytics
+from app.routers import auth, users, exercises, routines, assignments, metrics, analytics, multimedia
 
- 
+
+MEDIA_DIR = "/app/media"
+os.makedirs(MEDIA_DIR, exist_ok=True)
+
 app = FastAPI(
     title="Web Entrenadores API",
     description="API REST para la plataforma de gestión de entrenadores personales",
@@ -21,8 +26,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
- 
- 
+
+
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
@@ -34,3 +39,6 @@ app.include_router(routines.router, prefix="/api/v1/routines", tags=["Routines"]
 app.include_router(assignments.router, prefix="/api/v1/assignments", tags=["Assignments"])
 app.include_router(metrics.router, prefix="/api/v1/metrics", tags=["Metrics"])
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytics"])
+app.include_router(multimedia.router, prefix="/api/v1/multimedia", tags=["Multimedia"])
+
+app.mount("/media", StaticFiles(directory=MEDIA_DIR), name="media")

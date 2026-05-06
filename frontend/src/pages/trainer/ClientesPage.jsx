@@ -82,21 +82,20 @@ function ClientesPage() {
   const [filtroGrupo,  setFiltroGrupo]  = useState('')
   const [modalAbierto, setModalAbierto] = useState(!!location.state?.openModal)
 
-  useEffect(() => {
-    async function cargarClientes() {
-      setLoading(true)
-      setError('')
-      try {
-        const data = await analyticsApi.getTrainerClientsList()
-        setClientes(data)
-      } catch (err) {
-        setError(err.message || 'Error al cargar los clientes')
-      } finally {
-        setLoading(false)
-      }
+  async function cargarClientes() {
+    setLoading(true)
+    setError('')
+    try {
+      const data = await analyticsApi.getTrainerClientsList()
+      setClientes(data)
+    } catch (err) {
+      setError(err.message || 'Error al cargar los clientes')
+    } finally {
+      setLoading(false)
     }
-    cargarClientes()
-  }, [])
+  }
+
+  useEffect(() => { cargarClientes() }, [])
 
   const filas = clientes
     .map((c) => ({
@@ -156,6 +155,7 @@ function ClientesPage() {
       <ModalAnadirCliente
         isOpen={modalAbierto}
         onClose={() => setModalAbierto(false)}
+        onSuccess={cargarClientes}
       />
 
     </div>

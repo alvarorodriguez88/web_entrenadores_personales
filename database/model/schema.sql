@@ -146,28 +146,63 @@ CREATE TABLE IF NOT EXISTS `web_entrenadores`.`bloqueRutina` (
 ) ENGINE=InnoDB;
 
 -- -----------------------------------------------------
+-- Table `web_entrenadores`.`archivoMultimedia`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `web_entrenadores`.`archivoMultimedia`;
+
+CREATE TABLE IF NOT EXISTS `web_entrenadores`.`archivoMultimedia` (
+  `id_archivo`      INT NOT NULL AUTO_INCREMENT,
+  `id_entrenador`   INT NOT NULL,
+  `nombre_original` VARCHAR(255) NOT NULL,
+  `nombre_archivo`  VARCHAR(255) NOT NULL,
+  `tipo`            ENUM('VIDEO', 'IMAGEN') NOT NULL,
+  `tamano_bytes`    INT NOT NULL,
+  `fecha_subida`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_archivo`),
+  UNIQUE INDEX `uq_nombre_archivo` (`nombre_archivo` ASC) VISIBLE,
+  INDEX `fk_multimedia_entrenador_idx` (`id_entrenador` ASC) VISIBLE,
+  CONSTRAINT `fk_multimedia_entrenador`
+    FOREIGN KEY (`id_entrenador`)
+    REFERENCES `web_entrenadores`.`entrenador` (`id_usuario`)
+    ON DELETE CASCADE
+    ON UPDATE NO ACTION
+) ENGINE=InnoDB;
+
+-- -----------------------------------------------------
 -- Table `web_entrenadores`.`ejercicio`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `web_entrenadores`.`ejercicio`;
-
+ 
 CREATE TABLE IF NOT EXISTS `web_entrenadores`.`ejercicio` (
-  `id_ejercicio`  INT NOT NULL AUTO_INCREMENT,
-  `id_entrenador` INT NOT NULL,
-  `nombre`        VARCHAR(100) NOT NULL,
-  `descripcion`   VARCHAR(255) NOT NULL,
+  `id_ejercicio`   INT NOT NULL AUTO_INCREMENT,
+  `id_entrenador`  INT NOT NULL,
+  `nombre`         VARCHAR(100) NOT NULL,
+  `descripcion`    VARCHAR(255) NOT NULL,
   `grupo_muscular` VARCHAR(50) NULL,
-  `equipamiento`  VARCHAR(50) NULL,
-  `video_url`     VARCHAR(255) NULL,
-  `fotos_url`     VARCHAR(255) NULL,
-  `creado_en`     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `archivado`     TINYINT(1) NOT NULL DEFAULT 0,
+  `equipamiento`   VARCHAR(50) NULL,
+  `id_video`       INT NULL,
+  `id_imagen`      INT NULL,
+  `creado_en`      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `archivado`      TINYINT(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id_ejercicio`),
   INDEX `fk_entrenador_ejercicio_idx` (`id_entrenador` ASC) VISIBLE,
   UNIQUE INDEX `uq_ejercicio_entrenador_nombre` (`id_entrenador` ASC, `nombre` ASC) VISIBLE,
+  INDEX `fk_ejercicio_video_idx` (`id_video` ASC) VISIBLE,
+  INDEX `fk_ejercicio_imagen_idx` (`id_imagen` ASC) VISIBLE,
   CONSTRAINT `fk_entrenador_ejercicio`
     FOREIGN KEY (`id_entrenador`)
     REFERENCES `web_entrenadores`.`entrenador` (`id_usuario`)
     ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_ejercicio_video`
+    FOREIGN KEY (`id_video`)
+    REFERENCES `web_entrenadores`.`archivoMultimedia` (`id_archivo`)
+    ON DELETE SET NULL
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_ejercicio_imagen`
+    FOREIGN KEY (`id_imagen`)
+    REFERENCES `web_entrenadores`.`archivoMultimedia` (`id_archivo`)
+    ON DELETE SET NULL
     ON UPDATE NO ACTION
 ) ENGINE=InnoDB;
 

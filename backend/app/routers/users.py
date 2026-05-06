@@ -7,7 +7,8 @@ from app.dependencies import get_current_trainer, get_current_client
 from app.models.user import Entrenador, Cliente
 from app.schemas.user import (
     TrainerUpdate, TrainerResponse,
-    ClientUpdate, ClientResponse
+    ClientUpdate, ClientResponse,
+    ClientCreate, ClientCreateResponse,
 )
 from app.services import user_service
 
@@ -38,3 +39,14 @@ def get_client_by_id(id_client: int, trainer: Entrenador = Depends(get_current_t
 @router.get("/clients", response_model=List[ClientResponse])
 def get_trainer_clients(trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db)):
     return user_service.get_trainer_clients(db, trainer.id_usuario)
+
+@router.post("/clients", response_model=ClientCreateResponse, status_code=201)
+def create_client(data: ClientCreate, trainer: Entrenador = Depends(get_current_trainer), db: Session = Depends(get_db),):
+    client = user_service.create_client_for_trainer(db, trainer.id_usuario, data)
+    response = ClientCreateResponse(
+        id_cliente = client.id_usuario,
+        nombre = client.user.nombre,
+        apellidos = client.user.apellidos,
+        email = client.user.email,
+    )
+    return response

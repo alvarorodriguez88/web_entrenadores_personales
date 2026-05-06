@@ -13,13 +13,14 @@ class Ejercicio(Base):
     descripcion = Column(String(255), nullable=False)
     grupo_muscular = Column(String(50), nullable=True)
     equipamiento = Column(String(50), nullable=True)
-    video_url = Column(String(255), nullable=True)
-    fotos_url = Column(String(255), nullable=True)
+    id_video = Column(Integer, ForeignKey("archivoMultimedia.id_archivo"), nullable=True)
+    id_imagen = Column(Integer, ForeignKey("archivoMultimedia.id_archivo"), nullable=True)
     archivado = Column(Boolean, nullable=False, default=False)
     creado_en = Column(DateTime, nullable=False, server_default=func.now())
 
     trainer = relationship("Entrenador", back_populates="exercises")
-
+    video = relationship("ArchivoMultimedia", foreign_keys=[id_video])
+    imagen = relationship("ArchivoMultimedia", foreign_keys=[id_imagen])
     routine_block_exercises = relationship("BloqueRutinaEjercicio", back_populates="exercise")
     completed_exercises = relationship("EjercicioRealizado", back_populates="exercise")
     categories = relationship("Categoria", secondary="ejercicioCategoria", viewonly=True)
