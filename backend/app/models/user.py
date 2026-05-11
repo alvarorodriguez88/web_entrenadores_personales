@@ -32,6 +32,7 @@ class Entrenador(Base):
     routines = relationship("Rutina", back_populates="trainer")
     exercises = relationship("Ejercicio", back_populates="trainer")
     media_files = relationship("ArchivoMultimedia", back_populates="trainer")
+    chat_sessions = relationship("ChatSesion", back_populates="trainer", cascade="all, delete-orphan")
 
 
 class Cliente(Base):

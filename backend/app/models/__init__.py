@@ -3,3 +3,4 @@ from app.models.exercise import Ejercicio
 from app.models.routine import Rutina, BloqueRutina, BloqueRutinaEjercicio
 from app.models.assignment import AsignacionRutina, SesionRutina, EjercicioRealizado
 from app.models.metric import MetricaFisica
+from app.models.chat import ChatSesion, ChatMensaje

@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
@@ -59,3 +59,7 @@ def get_current_client(current_user: Usuario = Depends(get_current_user), db: Se
             detail="Client profile not found"
         )
     return client
+
+def get_trainer_token(request: Request) -> str:
+    auth_header = request.headers.get("Authorization", "")
+    return auth_header.replace("Bearer ", "")
