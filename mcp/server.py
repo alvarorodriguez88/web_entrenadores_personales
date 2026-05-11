@@ -1,5 +1,6 @@
-from mcp.server.fastmcp import FastMCP
-from api_client import api_get
+from fastmcp import FastMCP, Context
+from api_client import api_get, set_token_from_context
+from utils import build_blocks_with_exercises
 
 mcp = FastMCP(
     name="web-entrenadores",
@@ -14,27 +15,31 @@ mcp = FastMCP(
 
 
 @mcp.tool()
-async def get_client_details(client_id: int) -> dict:
+async def get_client_details(client_id: int, ctx: Context) -> dict:
     """
     Returns the full profile of a client.
     Includes: id, name, surnames, email, level (PRINCIPIANTE/INTERMEDIO/AVANZADO), creation date,
     objective (PERDER_PESO/GANAR_MASA/MEJORAR_RESISTENCIA/MEJORAR_FUERZA/MANTENIMIENTO),
     Use this to get all relevant information about a client in one place.
     """
+    set_token_from_context(ctx)
     return await api_get(f"/users/clients/{client_id}")
 
+
 @mcp.tool()
-async def get_trainer_clients() -> list:
+async def get_trainer_clients(ctx: Context) -> list:
     """
     Returns the full list of the trainer's clients.
     Each client includes: id, name, surnames, email, level (PRINCIPIANTE/INTERMEDIO/AVANZADO),
     current active routine name, and date of last session.
     Use this to find clients with a specific profile or to compare clients.
     """
+    set_token_from_context(ctx)
     return await api_get("/analytics/trainer/clients/list")
 
+
 @mcp.tool()
-async def get_routine_details(routine_id: int) -> dict:
+async def get_routine_details(routine_id: int, ctx: Context) -> dict:
     """
     Returns the full details of a routine.
     Includes: name, level, objective, description, and for each block
@@ -42,30 +47,9 @@ async def get_routine_details(routine_id: int) -> dict:
     planned sets, reps, weight and rest.
     Use this to get all relevant information about a routine in one place.
     """
+    set_token_from_context(ctx)
     routine = await api_get(f"/routines/{routine_id}")
-    blocks = await api_get(f"/routines/{routine_id}/blocks")
-
-    blocks_with_exercises = []
-    for block in blocks:
-        block_id = block["id_bloque_rutina"]
-        exercises = await api_get(f"/routines/{routine_id}/blocks/{block_id}/exercises")
-
-        blocks_with_exercises.append({
-            "dia_semana": block["numero_dia"],
-            "nombre": block.get("nombre"),
-            "notas": block.get("notas"),
-            "ejercicios": [
-                {
-                    "nombre": e.get("nombre_ejercicio"),
-                    "orden": e["orden"],
-                    "series": e["series_plan"],
-                    "reps": e["reps_plan"],
-                    "peso_obj_kg": e.get("peso_obj"),
-                    "descanso_seg": e.get("descanso_seg"),
-                }
-                for e in exercises
-            ],
-        })
+    blocks_with_exercises = await build_blocks_with_exercises(routine_id, api_get)
 
     return {
         "id_rutina": routine_id,
@@ -77,8 +61,9 @@ async def get_routine_details(routine_id: int) -> dict:
         "bloques": blocks_with_exercises,
     }
 
+
 @mcp.tool()
-async def get_routines_with_details() -> list:
+async def get_routines_with_details(ctx: Context) -> list:
     """
     Returns all trainer routines with their complete structure: blocks and exercises.
     Each routine includes: name, level, objective, description, and for each block
@@ -86,6 +71,7 @@ async def get_routines_with_details() -> list:
     sets, reps, weight and rest.
     Use this to recommend a routine to a client based on their profile and goals.
     """
+    set_token_from_context(ctx)
     routines_list = await api_get("/routines")
 
     result = []
@@ -94,29 +80,8 @@ async def get_routines_with_details() -> list:
             continue
 
         routine_id = routine["id_rutina"]
-        blocks = await api_get(f"/routines/{routine_id}/blocks")
-        blocks_with_exercises = []
+        blocks_with_exercises = await build_blocks_with_exercises(routine_id, api_get)
 
-        for block in blocks:
-            block_id = block["id_bloque_rutina"]
-            exercises = await api_get(f"/routines/{routine_id}/blocks/{block_id}/exercises")
-
-            blocks_with_exercises.append({
-                "dia_semana": block["numero_dia"],
-                "nombre": block.get("nombre"),
-                "notas": block.get("notas"),
-                "ejercicios": [
-                    {
-                        "nombre": e.get("nombre_ejercicio"),
-                        "orden": e["orden"],
-                        "series": e["series_plan"],
-                        "reps": e["reps_plan"],
-                        "peso_obj_kg": e.get("peso_obj"),
-                        "descanso_seg": e.get("descanso_seg"),
-                    }
-                    for e in exercises
-                ],
-            })
         result.append({
             "id_rutina": routine_id,
             "nombre": routine["nombre"],
@@ -129,8 +94,9 @@ async def get_routines_with_details() -> list:
 
     return result
 
+
 @mcp.tool()
-async def get_clients_with_stats(periodo: str = "semanal") -> list:
+async def get_clients_with_stats(periodo: str = "semanal", ctx: Context = None) -> list:
     """
     Returns all trainer clients with their full profile and performance stats.
     Each client includes: id, name, surnames, level, objective, active routine,
@@ -145,6 +111,8 @@ async def get_clients_with_stats(periodo: str = "semanal") -> list:
     - clients with low compliance (cumplimiento_pct < 60)
     - clients with low accordance (conformidad_avg < 50 in 3 periods in a row)
     """
+    if ctx:
+        set_token_from_context(ctx)
     clients_list = await api_get("/analytics/trainer/clients/list")
     clients_table = await api_get(
         "/analytics/trainer/clients/table",
@@ -171,8 +139,9 @@ async def get_clients_with_stats(periodo: str = "semanal") -> list:
 
     return result
 
+
 @mcp.tool()
-async def get_client_training_history(client_id: int) -> dict:
+async def get_client_training_history(client_id: int, ctx: Context) -> dict:
     """
     Returns the full training history of a client.
     Includes all routine assignments (active, paused and finished) with their
@@ -181,6 +150,7 @@ async def get_client_training_history(client_id: int) -> dict:
     Use this to understand how a client has progressed over time or what
     routines they have had assigned.
     """
+    set_token_from_context(ctx)
     assignments = await api_get(f"/assignments/clients/{client_id}/history")
     evolution = await api_get(
         f"/analytics/trainer/clients/{client_id}/evolution",
@@ -203,14 +173,16 @@ async def get_client_training_history(client_id: int) -> dict:
         "evolucion": puntos,
     }
 
+
 @mcp.tool()
-async def get_client_physical_history(client_id: int) -> list:
+async def get_client_physical_history(client_id: int, ctx: Context) -> list:
     """
     Returns the full physical metrics history of a client.
     Each record includes: date, weight (kg), height (cm) and body fat percentage.
     Records are ordered from oldest to most recent.
     Use this to analyze physical evolution, weight loss or muscle gain progress.
     """
+    set_token_from_context(ctx)
     metrics = await api_get(f"/metrics/clients/{client_id}")
 
     result = []
@@ -224,6 +196,5 @@ async def get_client_physical_history(client_id: int) -> list:
     return result
 
 
-
 if __name__ == "__main__":
-    mcp.run(transport="sse")
+    mcp.run(transport="http", host="0.0.0.0", port=8000)
