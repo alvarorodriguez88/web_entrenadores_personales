@@ -19,13 +19,13 @@ USE `web_entrenadores`;
 DROP TABLE IF EXISTS `web_entrenadores`.`usuario`;
 
 CREATE TABLE IF NOT EXISTS `web_entrenadores`.`usuario` (
-  `id_usuario`     INT NOT NULL AUTO_INCREMENT,
-  `email`          VARCHAR(100) NOT NULL,
-  `passwd_hash`    VARCHAR(255) NOT NULL,
-  `rol`            ENUM('ENTRENADOR', 'CLIENTE') NOT NULL,
+  `id_usuario` INT NOT NULL AUTO_INCREMENT,
+  `email` VARCHAR(100) NOT NULL,
+  `passwd_hash` VARCHAR(255) NOT NULL,
+  `rol` ENUM('ENTRENADOR', 'CLIENTE') NOT NULL,
   `fecha_creacion` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `nombre`         VARCHAR(45) NOT NULL,
-  `apellidos`      VARCHAR(80) NOT NULL,
+  `nombre` VARCHAR(45) NOT NULL,
+  `apellidos` VARCHAR(80) NOT NULL,
   PRIMARY KEY (`id_usuario`),
   UNIQUE INDEX `email_UNIQUE` (`email` ASC) VISIBLE
 ) ENGINE=InnoDB;
@@ -36,9 +36,9 @@ CREATE TABLE IF NOT EXISTS `web_entrenadores`.`usuario` (
 DROP TABLE IF EXISTS `web_entrenadores`.`entrenador`;
 
 CREATE TABLE IF NOT EXISTS `web_entrenadores`.`entrenador` (
-  `id_usuario`   INT NOT NULL,
+  `id_usuario` INT NOT NULL,
   `especialidad` VARCHAR(80) NULL,
-  `bio`          VARCHAR(255) NULL,
+  `bio` VARCHAR(255) NULL,
   PRIMARY KEY (`id_usuario`),
   CONSTRAINT `fk_entrenador_usuario`
     FOREIGN KEY (`id_usuario`)
@@ -53,17 +53,11 @@ CREATE TABLE IF NOT EXISTS `web_entrenadores`.`entrenador` (
 DROP TABLE IF EXISTS `web_entrenadores`.`cliente`;
 
 CREATE TABLE IF NOT EXISTS `web_entrenadores`.`cliente` (
-  `id_usuario`   INT NOT NULL,
+  `id_usuario` INT NOT NULL,
   `id_entrenador` INT NOT NULL,
-  `fecha_alta`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `nivel`        ENUM('PRINCIPIANTE', 'INTERMEDIO', 'AVANZADO') NULL,
-  `objetivo`     ENUM(
-                    'PERDER_PESO',
-                    'GANAR_MASA',
-                    'MEJORAR_RESISTENCIA',
-                    'MEJORAR_FUERZA',
-                    'MANTENIMIENTO'
-                 ) NULL,
+  `fecha_alta` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `nivel` ENUM('PRINCIPIANTE', 'INTERMEDIO', 'AVANZADO') NULL,
+  `objetivo` ENUM('PERDER_PESO', 'GANAR_MASA', 'MEJORAR_RESISTENCIA', 'MEJORAR_FUERZA', 'MANTENIMIENTO') NULL,
   PRIMARY KEY (`id_usuario`),
   CONSTRAINT `fk_cliente_usuario`
     FOREIGN KEY (`id_usuario`)
@@ -83,13 +77,13 @@ CREATE TABLE IF NOT EXISTS `web_entrenadores`.`cliente` (
 DROP TABLE IF EXISTS `web_entrenadores`.`metricafisica`;
 
 CREATE TABLE IF NOT EXISTS `web_entrenadores`.`metricafisica` (
-  `id_metrica`     INT NOT NULL AUTO_INCREMENT,
-  `id_cliente`     INT NOT NULL,
+  `id_metrica` INT NOT NULL AUTO_INCREMENT,
+  `id_cliente` INT NOT NULL,
   `fecha_registro` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `peso_kg`        DECIMAL(5,2) NOT NULL,
-  `altura_cm`      DECIMAL(5,2) NULL,
-  `grasa_pct`      DECIMAL(5,2) NULL,
-  `comentario`     VARCHAR(255) NULL,
+  `peso_kg` DECIMAL(5,2) NOT NULL,
+  `altura_cm` DECIMAL(5,2) NULL,
+  `grasa_pct` DECIMAL(5,2) NULL,
+  `comentario` VARCHAR(255) NULL,
   PRIMARY KEY (`id_metrica`),
   INDEX `fk_metrica_cliente_idx` (`id_cliente` ASC) VISIBLE,
   UNIQUE INDEX `cliente_registro` (`id_cliente` ASC, `fecha_registro` ASC) VISIBLE,
@@ -106,14 +100,14 @@ CREATE TABLE IF NOT EXISTS `web_entrenadores`.`metricafisica` (
 DROP TABLE IF EXISTS `web_entrenadores`.`rutina`;
 
 CREATE TABLE IF NOT EXISTS `web_entrenadores`.`rutina` (
-  `id_rutina`      INT NOT NULL AUTO_INCREMENT,
-  `id_entrenador`  INT NOT NULL,
-  `nombre`         VARCHAR(100) NOT NULL,
-  `objetivo`       VARCHAR(150) NULL,
-  `descripcion`    VARCHAR(255) NULL,
-  `nivel`          ENUM('PRINCIPIANTE', 'INTERMEDIO', 'AVANZADO') NULL,
+  `id_rutina` INT NOT NULL AUTO_INCREMENT,
+  `id_entrenador` INT NOT NULL,
+  `nombre` VARCHAR(100) NOT NULL,
+  `objetivo` VARCHAR(150) NULL,
+  `descripcion` VARCHAR(255) NULL,
+  `nivel` ENUM('PRINCIPIANTE', 'INTERMEDIO', 'AVANZADO') NULL,
   `fecha_creacion` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `archivado`      TINYINT(1) NOT NULL DEFAULT 0,
+  `archivado` TINYINT(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id_rutina`),
   INDEX `fk_rutina_entrenador_idx` (`id_entrenador` ASC) VISIBLE,
   CONSTRAINT `fk_rutina_entrenador`
@@ -130,10 +124,10 @@ DROP TABLE IF EXISTS `web_entrenadores`.`bloqueRutina`;
 
 CREATE TABLE IF NOT EXISTS `web_entrenadores`.`bloqueRutina` (
   `id_bloque_rutina` INT NOT NULL AUTO_INCREMENT,
-  `id_rutina`        INT NOT NULL,
-  `numero_dia`       TINYINT NOT NULL,
-  `nombre`           VARCHAR(80) NULL,
-  `notas`            VARCHAR(255) NULL,
+  `id_rutina` INT NOT NULL,
+  `numero_dia` TINYINT NOT NULL,
+  `nombre` VARCHAR(80) NULL,
+  `notas` VARCHAR(255) NULL,
   PRIMARY KEY (`id_bloque_rutina`),
   INDEX `fk_bloque_rutina_idx` (`id_rutina` ASC) VISIBLE,
   UNIQUE INDEX `uq_bloquerutina_rutina_dia` (`id_rutina` ASC, `numero_dia` ASC) VISIBLE,
@@ -151,13 +145,13 @@ CREATE TABLE IF NOT EXISTS `web_entrenadores`.`bloqueRutina` (
 DROP TABLE IF EXISTS `web_entrenadores`.`archivoMultimedia`;
 
 CREATE TABLE IF NOT EXISTS `web_entrenadores`.`archivoMultimedia` (
-  `id_archivo`      INT NOT NULL AUTO_INCREMENT,
-  `id_entrenador`   INT NOT NULL,
+  `id_archivo` INT NOT NULL AUTO_INCREMENT,
+  `id_entrenador` INT NOT NULL,
   `nombre_original` VARCHAR(255) NOT NULL,
-  `nombre_archivo`  VARCHAR(255) NOT NULL,
-  `tipo`            ENUM('VIDEO', 'IMAGEN') NOT NULL,
-  `tamano_bytes`    INT NOT NULL,
-  `fecha_subida`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `nombre_archivo` VARCHAR(255) NOT NULL,
+  `tipo` ENUM('VIDEO', 'IMAGEN') NOT NULL,
+  `tamano_bytes` INT NOT NULL,
+  `fecha_subida` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id_archivo`),
   UNIQUE INDEX `uq_nombre_archivo` (`nombre_archivo` ASC) VISIBLE,
   INDEX `fk_multimedia_entrenador_idx` (`id_entrenador` ASC) VISIBLE,
@@ -174,16 +168,16 @@ CREATE TABLE IF NOT EXISTS `web_entrenadores`.`archivoMultimedia` (
 DROP TABLE IF EXISTS `web_entrenadores`.`ejercicio`;
  
 CREATE TABLE IF NOT EXISTS `web_entrenadores`.`ejercicio` (
-  `id_ejercicio`   INT NOT NULL AUTO_INCREMENT,
-  `id_entrenador`  INT NOT NULL,
-  `nombre`         VARCHAR(100) NOT NULL,
-  `descripcion`    VARCHAR(255) NOT NULL,
+  `id_ejercicio` INT NOT NULL AUTO_INCREMENT,
+  `id_entrenador` INT NOT NULL,
+  `nombre` VARCHAR(100) NOT NULL,
+  `descripcion` VARCHAR(255) NOT NULL,
   `grupo_muscular` VARCHAR(50) NULL,
-  `equipamiento`   VARCHAR(50) NULL,
-  `id_video`       INT NULL,
-  `id_imagen`      INT NULL,
-  `creado_en`      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `archivado`      TINYINT(1) NOT NULL DEFAULT 0,
+  `equipamiento` VARCHAR(50) NULL,
+  `id_video` INT NULL,
+  `id_imagen` INT NULL,
+  `creado_en` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `archivado` TINYINT(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id_ejercicio`),
   INDEX `fk_entrenador_ejercicio_idx` (`id_entrenador` ASC) VISIBLE,
   UNIQUE INDEX `uq_ejercicio_entrenador_nombre` (`id_entrenador` ASC, `nombre` ASC) VISIBLE,
@@ -213,14 +207,14 @@ DROP TABLE IF EXISTS `web_entrenadores`.`bloqueRutinaEjercicio`;
 
 CREATE TABLE IF NOT EXISTS `web_entrenadores`.`bloqueRutinaEjercicio` (
   `id_bloque_rutina_ejercicio` INT NOT NULL AUTO_INCREMENT,
-  `id_bloque_rutina`           INT NOT NULL,
-  `id_ejercicio`               INT NOT NULL,
-  `orden`                      TINYINT NOT NULL,
-  `reps_plan`                  TINYINT NOT NULL,
-  `series_plan`                TINYINT NOT NULL,
-  `descanso_seg`               SMALLINT NULL,
-  `peso_obj`                   DECIMAL(6,2) NULL,
-  `notas`                      VARCHAR(255) NULL,
+  `id_bloque_rutina` INT NOT NULL,
+  `id_ejercicio` INT NOT NULL,
+  `orden` TINYINT NOT NULL,
+  `reps_plan` TINYINT NOT NULL,
+  `series_plan` TINYINT NOT NULL,
+  `descanso_seg` SMALLINT NULL,
+  `peso_obj` DECIMAL(6,2) NULL,
+  `notas` VARCHAR(255) NULL,
   PRIMARY KEY (`id_bloque_rutina_ejercicio`),
   INDEX `fk_bloque_rutina_ejercicio_idx` (`id_bloque_rutina` ASC) VISIBLE,
   INDEX `fk_bre_ejercicio_idx` (`id_ejercicio` ASC) VISIBLE,
@@ -244,12 +238,12 @@ DROP TABLE IF EXISTS `web_entrenadores`.`asignacionRutina`;
 
 CREATE TABLE IF NOT EXISTS `web_entrenadores`.`asignacionRutina` (
   `id_asignacion_rutina` INT NOT NULL AUTO_INCREMENT,
-  `id_cliente`           INT NOT NULL,
-  `id_rutina`            INT NOT NULL,
-  `fecha_inicio`         DATE NOT NULL,
-  `fecha_fin`            DATE NOT NULL,
-  `estado`               ENUM('ACTIVA', 'PAUSADA', 'FINALIZADA') NOT NULL,
-  `notas`                VARCHAR(255) NULL,
+  `id_cliente` INT NOT NULL,
+  `id_rutina` INT NOT NULL,
+  `fecha_inicio` DATE NOT NULL,
+  `fecha_fin` DATE NOT NULL,
+  `estado` ENUM('ACTIVA', 'PAUSADA', 'FINALIZADA') NOT NULL,
+  `notas` VARCHAR(255) NULL,
   PRIMARY KEY (`id_asignacion_rutina`),
   INDEX `fk_asignacion_cliente_idx` (`id_cliente` ASC) VISIBLE,
   INDEX `fk_asignacion_rutina_idx` (`id_rutina` ASC) VISIBLE,
@@ -273,13 +267,13 @@ DROP TABLE IF EXISTS `web_entrenadores`.`asignacionEjercicio`;
 
 CREATE TABLE IF NOT EXISTS `web_entrenadores`.`asignacionEjercicio` (
   `id_asignacion_ejercicio` INT NOT NULL AUTO_INCREMENT,
-  `id_asignacion_rutina`    INT NOT NULL,
-  `id_bloque_rutina_ej`     INT NOT NULL,
-  `series_plan`             TINYINT NULL,
-  `reps_plan`               TINYINT NULL,
-  `peso_obj`                DECIMAL(6,2) NULL,
-  `descanso_seg`            SMALLINT NULL,
-  `notas`                   VARCHAR(255) NULL,
+  `id_asignacion_rutina` INT NOT NULL,
+  `id_bloque_rutina_ej` INT NOT NULL,
+  `series_plan` TINYINT NULL,
+  `reps_plan` TINYINT NULL,
+  `peso_obj` DECIMAL(6,2) NULL,
+  `descanso_seg` SMALLINT NULL,
+  `notas` VARCHAR(255) NULL,
   PRIMARY KEY (`id_asignacion_ejercicio`),
   UNIQUE INDEX `uq_asignacion_ejercicio` (`id_asignacion_rutina` ASC, `id_bloque_rutina_ej` ASC) VISIBLE,
   INDEX `fk_asignacion_ej_asignacion_idx` (`id_asignacion_rutina` ASC) VISIBLE,
@@ -302,15 +296,15 @@ CREATE TABLE IF NOT EXISTS `web_entrenadores`.`asignacionEjercicio` (
 DROP TABLE IF EXISTS `web_entrenadores`.`sesionRutina`;
 
 CREATE TABLE IF NOT EXISTS `web_entrenadores`.`sesionRutina` (
-  `id_sesion_rutina`  INT NOT NULL AUTO_INCREMENT,
-  `id_asignacion`     INT NOT NULL,
-  `id_bloque_rutina`  INT NOT NULL,
-  `fecha_hora`        DATETIME NULL DEFAULT CURRENT_TIMESTAMP,
-  `duracion_min`      SMALLINT NULL,
-  `esfuerzo_rpe`      TINYINT NOT NULL,
-  `comentario`        VARCHAR(255) NULL,
-  `nota_rendimiento`  DECIMAL(4,2) NULL,
-  `conformidad`       TINYINT NULL,
+  `id_sesion_rutina` INT NOT NULL AUTO_INCREMENT,
+  `id_asignacion` INT NOT NULL,
+  `id_bloque_rutina` INT NOT NULL,
+  `fecha_hora` DATETIME NULL DEFAULT CURRENT_TIMESTAMP,
+  `duracion_min` SMALLINT NULL,
+  `esfuerzo_rpe` TINYINT NOT NULL,
+  `comentario` VARCHAR(255) NULL,
+  `nota_rendimiento` DECIMAL(4,2) NULL,
+  `conformidad` TINYINT NULL,
   PRIMARY KEY (`id_sesion_rutina`),
   CONSTRAINT `fk_asignacion_sesion`
     FOREIGN KEY (`id_asignacion`)
@@ -331,14 +325,14 @@ DROP TABLE IF EXISTS `web_entrenadores`.`ejercicioRealizado`;
 
 CREATE TABLE IF NOT EXISTS `web_entrenadores`.`ejercicioRealizado` (
   `id_ejercicio_realizado` INT NOT NULL AUTO_INCREMENT,
-  `id_sesion`              INT NOT NULL,
-  `id_ejercicio`           INT NOT NULL,
-  `orden`                  TINYINT NOT NULL,
-  `series_real`            TINYINT NOT NULL,
-  `reps_real`              TINYINT NOT NULL,
-  `peso_real`              DECIMAL(6,2) NULL,
-  `rpe_real`               TINYINT NULL,
-  `comentario`             VARCHAR(255) NULL,
+  `id_sesion` INT NOT NULL,
+  `id_ejercicio` INT NOT NULL,
+  `orden` TINYINT NOT NULL,
+  `series_real` TINYINT NOT NULL,
+  `reps_real` TINYINT NOT NULL,
+  `peso_real` DECIMAL(6,2) NULL,
+  `rpe_real` TINYINT NULL,
+  `comentario` VARCHAR(255) NULL,
   PRIMARY KEY (`id_ejercicio_realizado`),
   INDEX `fk_sesion_ej_realizado_idx` (`id_sesion` ASC) VISIBLE,
   INDEX `fk_ejercicio_ej_realizado_idx` (`id_ejercicio` ASC) VISIBLE,
@@ -362,7 +356,7 @@ DROP TABLE IF EXISTS `web_entrenadores`.`categoria`;
 
 CREATE TABLE IF NOT EXISTS `web_entrenadores`.`categoria` (
   `id_categoria` INT NOT NULL AUTO_INCREMENT,
-  `nombre`       VARCHAR(50) NOT NULL,
+  `nombre` VARCHAR(50) NOT NULL,
   PRIMARY KEY (`id_categoria`),
   UNIQUE INDEX `uq_categoria_nombre` (`nombre` ASC) VISIBLE
 ) ENGINE=InnoDB;
@@ -392,6 +386,50 @@ CREATE TABLE IF NOT EXISTS `web_entrenadores`.`ejercicioCategoria` (
   CONSTRAINT `fk_ejercicioCategoria_categoria`
     FOREIGN KEY (`id_categoria`)
     REFERENCES `web_entrenadores`.`categoria` (`id_categoria`)
+    ON DELETE CASCADE
+    ON UPDATE NO ACTION
+) ENGINE=InnoDB;
+
+-- -----------------------------------------------------
+-- Table `web_entrenadores`.`chat_sesion`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `web_entrenadores`.`chat_sesion`;
+
+CREATE TABLE IF NOT EXISTS `web_entrenadores`.`chat_sesion` (
+  `id_chat_sesion` INT NOT NULL AUTO_INCREMENT,
+  `id_entrenador` INT NOT NULL,
+  `titulo` VARCHAR(150) NULL     COMMENT 'Título opcional, ej: "Consulta sobre Carlos"',
+  `fecha_creacion` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `fecha_updated`  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_chat_sesion`),
+  INDEX `fk_chat_sesion_entrenador_idx` (`id_entrenador` ASC) VISIBLE,
+  CONSTRAINT `fk_chat_sesion_entrenador`
+    FOREIGN KEY (`id_entrenador`)
+    REFERENCES `web_entrenadores`.`entrenador` (`id_usuario`)
+    ON DELETE CASCADE
+    ON UPDATE NO ACTION
+) ENGINE=InnoDB;
+
+-- -----------------------------------------------------
+-- Table `web_entrenadores`.`chat_mensaje`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `web_entrenadores`.`chat_mensaje`;
+
+CREATE TABLE IF NOT EXISTS `web_entrenadores`.`chat_mensaje` (
+  `id_chat_mensaje` INT NOT NULL AUTO_INCREMENT,
+  `id_sesion` INT NOT NULL,
+  `rol` ENUM(
+            'user',
+            'assistant',
+            'tool'
+        ) NOT NULL COMMENT 'Convenio OpenAI/Ollama',
+  `content` TEXT NOT NULL,
+  `fecha_creacion` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_chat_mensaje`),
+  INDEX `idx_chat_mensaje_sesion_fecha` (`id_sesion` ASC, `fecha_creacion` ASC) VISIBLE,
+  CONSTRAINT `fk_chat_mensaje_sesion`
+    FOREIGN KEY (`id_sesion`)
+    REFERENCES `web_entrenadores`.`chat_sesion` (`id_chat_sesion`)
     ON DELETE CASCADE
     ON UPDATE NO ACTION
 ) ENGINE=InnoDB;
