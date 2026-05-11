@@ -50,15 +50,24 @@ services:
     container_name: web_entrenadores_mcp
     restart: unless-stopped
     ports:
-      - "5001:8000"
+      - "8001:8000"
     environment:
       - API_BASE_URL=http://backend:8000/api/v1
-      - HOST=0.0.0.0
-      - PORT=8000
     depends_on:
       - backend
-    
+
+  ollama:
+    image: ollama/ollama
+    container_name: web_entrenadores_ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
 
 volumes:
   db_data:
   media_data:
+  ollama_data:
