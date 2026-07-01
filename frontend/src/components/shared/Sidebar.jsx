@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { Settings, LogOut } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import logo from '../../assets/logo-sin-circulo.svg'
 
 function Sidebar({ navItems, onAjustesClick }) {
   const { logout } = useAuth()
@@ -15,8 +16,8 @@ function Sidebar({ navItems, onAjustesClick }) {
     <aside className="w-56 min-h-screen flex flex-col text-white bg-[#1e3a5f]">
 
       <div className="px-5 pt-6 pb-5">
-        <div className="w-12 h-12 rounded-xl bg-[#1D7FD8] flex items-center justify-center font-bold text-lg tracking-tight">
-          L
+        <div className="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center">
+          <img src={logo} alt="Volcán Fitness" className="w-full h-full object-cover" />
         </div>
       </div>
 

@@ -1,5 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import Button from '../../components/shared/Button'
+import logo from '../../assets/logo.svg'
+import landingImg from '../../assets/landing.jpg'
 
 function LandingPage() {
   const navigate = useNavigate()
@@ -17,29 +19,28 @@ function LandingPage() {
         </button>
       </div>
 
-      {/* Hero — imagen de fondo (reemplazar src por imagen real) */}
-      <div className="relative h-64 sm:h-80 bg-gradient-to-br from-gray-700 to-gray-900 overflow-visible">
-        {/* TODO: reemplazar el gradiente por una imagen real:
-            <img src={heroImg} className="w-full h-full object-cover" /> */}
+      {/* Hero — imagen de fondo */}
+      <div className="relative h-80 sm:h-96 overflow-visible">
+        <img src={landingImg} alt="" className="absolute inset-0 w-full h-full object-cover" />
 
         {/* Logo circular centrado, sobresale sobre el hero */}
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2
-                        w-24 h-24 rounded-full bg-[#1D7FD8]
+                        w-36 h-36 rounded-full bg-white
                         flex items-center justify-center
-                        ring-4 ring-white shadow-lg">
-          <span className="text-white text-sm font-semibold">Logo</span>
+                        ring-4 ring-white shadow-lg overflow-hidden">
+          <img src={logo} alt="Volcán Fitness" className="w-full h-full object-cover" />
         </div>
       </div>
 
       {/* Contenido principal */}
-      <div className="flex flex-col items-center gap-8 pt-20 pb-16 px-6">
+      <div className="flex flex-col items-center gap-8 pt-28 pb-16 px-6">
 
         <h1 className="text-4xl sm:text-5xl font-black text-gray-900 tracking-tight text-center">
           Volcán Fitness
         </h1>
 
         <div className="flex gap-4">
-          <Button size="lg" onClick={() => navigate('/login')}>
+          <Button size="lg" variant="primaryDark" onClick={() => navigate('/login')}>
             Iniciar sesión
           </Button>
         </div>

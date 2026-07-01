@@ -9,9 +9,6 @@ import ClientStatsTable  from '../../components/shared/ClientStatsTable'
 
 const DONUT_COLORS = ['#1D7FD8', '#60a5fa', '#fbbf24', '#f87171']
 
-// TODO: sustituir por datos reales — GET grupos cuando exista el endpoint
-const tablaGrupalData = []
-
 function toArray(val, ...keys) {
   if (Array.isArray(val)) return val
   for (const k of keys) {

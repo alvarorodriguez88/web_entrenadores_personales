@@ -4,6 +4,8 @@ import { useAuth } from '../../context/AuthContext'
 import { authApi, usersApi } from '../../services/api'
 import Input from '../../components/shared/Input'
 import Button from '../../components/shared/Button'
+import loginImg from '../../assets/login.jpg'
+import logo from '../../assets/logo.svg'
 
 async function fetchProfile() {
   try {
@@ -51,18 +53,27 @@ function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="h-screen flex overflow-hidden">
 
       {/* Imagen izquierda — ocupa toda la altura */}
-      <div className="hidden md:block w-1/2 bg-gradient-to-br from-gray-600 to-gray-800">
-        {/* TODO: reemplazar el gradiente por una imagen real:
-            <img src={heroImg} alt="" className="w-full h-full object-cover" /> */}
+      <div className="hidden md:block w-1/2 h-full">
+        <img src={loginImg} alt="" className="block w-full h-full object-cover" />
       </div>
 
-      <div className="w-full md:w-1/2 flex items-center justify-center px-10 py-12 bg-white">
+      <div className="w-full md:w-1/2 h-full flex items-center justify-center px-10 py-12 bg-white">
         <div className="w-full max-w-sm">
 
-          <h1 className="text-3xl font-black text-gray-900 leading-tight mb-8">
+          <div className="flex justify-center mb-8">
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="w-20 h-20 rounded-full bg-white flex items-center justify-center ring-4 ring-white shadow-lg overflow-hidden cursor-pointer"
+            >
+              <img src={logo} alt="Volcán Fitness" className="w-full h-full object-cover" />
+            </button>
+          </div>
+
+          <h1 className="text-3xl font-black text-gray-900 leading-tight mb-24">
             ¡Nos alegra verte de nuevo!
           </h1>
 
@@ -86,12 +97,23 @@ function LoginPage() {
               <p className="text-sm text-red-500">{error}</p>
             )}
 
-            <div className="flex justify-end mt-2">
-              <Button type="submit" loading={loading}>
+            <div className="mt-2">
+              <Button type="submit" size="lg" variant="primaryDark" fullWidth loading={loading}>
                 Iniciar sesión
               </Button>
             </div>
           </form>
+
+          <p className="text-center text-sm text-gray-500 mt-12">
+            ¿No tienes cuenta?{' '}
+            <button
+              type="button"
+              onClick={() => navigate('/register')}
+              className="font-semibold text-[#4C6EF5] underline hover:text-[#3b5bdb]"
+            >
+              Regístrate
+            </button>
+          </p>
 
         </div>
       </div>
