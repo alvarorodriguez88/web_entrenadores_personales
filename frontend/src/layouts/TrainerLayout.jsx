@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Home, LayoutDashboard, BookOpen, Users } from 'lucide-react'
+import { Home, LayoutDashboard, BookOpen, Users, Sparkles } from 'lucide-react'
 import Sidebar from '../components/shared/Sidebar'
 import ModalCambiarContrasena from '../components/shared/ModalCambiarContrasena'
 
@@ -8,6 +8,7 @@ const trainerNavItems = [
   { label: 'Dashboard',  path: '/trainer/dashboard',  icon: LayoutDashboard },
   { label: 'Contenido',  path: '/trainer/content',    icon: BookOpen },
   { label: 'Clientes',   path: '/trainer/clients',    icon: Users },
+  { label: 'Asistente IA', path: '/trainer/asistente', icon: Sparkles },
 ]
 
 function TrainerLayout({ children }) {

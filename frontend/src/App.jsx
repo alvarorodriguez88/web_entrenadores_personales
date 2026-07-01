@@ -18,6 +18,7 @@ import TrainerDashboardPage from './pages/trainer/DashboardPage'
 import ContentPage from './pages/trainer/ContenidoPage'
 import ClientsPage        from './pages/trainer/ClientesPage'
 import ClientePerfilPage  from './pages/trainer/ClientePerfilPage'
+import AsistenteIAPage    from './pages/trainer/AsistenteIAPage'
 
 function App() {
   return (
@@ -106,6 +107,17 @@ function App() {
               <ProtectedRoute requiredRole="trainer">
                 <TrainerLayout>
                   <ClientePerfilPage />
+                </TrainerLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/trainer/asistente"
+            element={
+              <ProtectedRoute requiredRole="trainer">
+                <TrainerLayout>
+                  <AsistenteIAPage />
                 </TrainerLayout>
               </ProtectedRoute>
             }

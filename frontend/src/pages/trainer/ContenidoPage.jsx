@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { Upload, Dumbbell, ClipboardList, Image as ImageIcon, Archive, ArchiveRestore, Hash, Plus, Search, Play } from 'lucide-react'
 import { exercisesApi, routinesApi, multimediaApi, MEDIA_BASE } from '../../services/api'
 import TabBar              from '../../components/shared/TabBar'
-import Table               from '../../components/shared/Table'
+import SortableTable       from '../../components/shared/SortableTable'
 import Modal               from '../../components/shared/Modal'
 import Button              from '../../components/shared/Button'
 import Input               from '../../components/shared/Input'
@@ -22,12 +22,9 @@ const TABS = ['Ejercicios', 'Rutinas', 'Multimedia']
 // PESTAÑA EJERCICIOS
 // ─────────────────────────────────────────────────────────────────
 function TabEjercicios() {
-  const [ejercicios,   setEjercicios]   = useState([])
-  const [loadingEj,    setLoadingEj]    = useState(true)
-  const [errorEj,      setErrorEj]      = useState('')
-  const [busqueda,     setBusqueda]     = useState('')
-  const [filtroGrupo,  setFiltroGrupo]  = useState('')
-  const [filtroEquip,  setFiltroEquip]  = useState('')
+  const [ejercicios,        setEjercicios]        = useState([])
+  const [loadingEj,         setLoadingEj]         = useState(true)
+  const [errorEj,           setErrorEj]           = useState('')
   const [modalEj,           setModalEj]           = useState(false)
   const [selectedEjercicio, setSelectedEjercicio] = useState(null)
   const [toggling,          setToggling]          = useState(new Set())
@@ -66,6 +63,7 @@ function TabEjercicios() {
     {
       key: 'nombre',
       label: 'Ejercicio',
+      width: '2fr',
       render: (v) => (
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
@@ -79,10 +77,16 @@ function TabEjercicios() {
       key: 'grupo_muscular',
       label: 'Grupo muscular',
       render: (v) => v
-        ? <span className="inline-flex px-2.5 py-1 rounded-lg bg-blue-50 text-[#1D7FD8] text-xs font-medium">{v}</span>
+        ? <span className="inline-flex px-2.5 py-1 rounded-lg bg-blue-50 text-[#1D7FD8] text-xs font-bold">{v}</span>
         : <span className="text-gray-300">—</span>,
     },
-    { key: 'equipamiento', label: 'Equipamiento' },
+    {
+      key: 'equipamiento',
+      label: 'Equipamiento',
+      render: (v) => v
+        ? <span className="font-bold text-gray-700">{v}</span>
+        : <span className="text-gray-300">—</span>,
+    },
     {
       key: 'archivado',
       label: 'Estado',
@@ -114,70 +118,36 @@ function TabEjercicios() {
     },
   ]
 
-  const filtrados = ejercicios.filter((e) =>
-    e.nombre.toLowerCase().includes(busqueda.toLowerCase()) &&
-    (!filtroGrupo || (e.grupo_muscular ?? '').toLowerCase().includes(filtroGrupo.toLowerCase())) &&
-    (!filtroEquip || (e.equipamiento ?? '').toLowerCase().includes(filtroEquip.toLowerCase()))
-  )
+  const ejerciciosConId = ejercicios.map(e => ({ ...e, id: e.id_ejercicio }))
 
   return (
     <>
-      <div className="flex flex-wrap gap-3 items-center">
-        <div className="flex-1 min-w-44 relative">
-          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-          <input
-            placeholder="Nombre ejercicio"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            className="w-full bg-white border border-gray-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:border-[#1D7FD8] transition-colors"
-          />
-        </div>
-        <div className="w-44">
-          <input
-            placeholder="Grupo muscular"
-            value={filtroGrupo}
-            onChange={(e) => setFiltroGrupo(e.target.value)}
-            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:border-[#1D7FD8] transition-colors"
-          />
-        </div>
-        <div className="w-44">
-          <input
-            placeholder="Equipamiento"
-            value={filtroEquip}
-            onChange={(e) => setFiltroEquip(e.target.value)}
-            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:border-[#1D7FD8] transition-colors"
-          />
-        </div>
-        <Button onClick={() => setModalEj(true)}>
-          <Plus size={15} />
-          Crear ejercicio
-        </Button>
-      </div>
-
       <div className="mt-4">
-        <div className="flex items-center gap-2 mb-3">
-          <p className="text-sm font-semibold text-gray-700">Tabla de ejercicios</p>
-          {!loadingEj && !errorEj && (
-            <span className="text-xs font-semibold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-              {filtrados.length}
-            </span>
-          )}
-        </div>
         {loadingEj ? (
           <div className="flex justify-center py-12">
             <span className="w-7 h-7 border-4 border-[#1D7FD8] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : errorEj ? (
           <p className="text-sm text-red-500 py-8 text-center">{errorEj}</p>
-        ) : filtrados.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-16 text-gray-300">
-            <Dumbbell size={36} />
-            <p className="text-sm">No se encontraron ejercicios</p>
-          </div>
         ) : (
-          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-            <Table columns={columnas} data={filtrados} onRowClick={setSelectedEjercicio} />
-          </div>
+          <SortableTable
+            data={ejerciciosConId}
+            columns={columnas}
+            title="Tabla de ejercicios"
+            searchFields={[
+              { key: 'nombre',         placeholder: 'Nombre' },
+              { key: 'grupo_muscular', placeholder: 'Grupo muscular' },
+              { key: 'equipamiento',   placeholder: 'Equipamiento' },
+            ]}
+            maxHeight="max-h-[392px]"
+            emptyMessage="No se encontraron ejercicios"
+            onRowClick={setSelectedEjercicio}
+            action={
+              <Button onClick={() => setModalEj(true)}>
+                <Plus size={15} />Crear ejercicio
+              </Button>
+            }
+          />
         )}
       </div>
 
@@ -345,7 +315,10 @@ function TabRutinas() {
         <div className="w-44">
           <Input placeholder="Objetivo"      value={filtroObj} onChange={(e) => setFiltroObj(e.target.value)} />
         </div>
-        <Button onClick={() => setModalCrear(true)}>Crear rutina</Button>
+        <Button onClick={() => setModalCrear(true)}>
+          <Plus size={15} />
+          Crear rutina
+          </Button>
       </div>
 
       <div className="mt-4 flex flex-col gap-8">
