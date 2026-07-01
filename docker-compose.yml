@@ -20,6 +20,7 @@ services:
       retries: 5
   
   backend:
+    env_file: ./backend/.env
     build: ./backend
     container_name: web_entrenadores_backend
     restart: unless-stopped

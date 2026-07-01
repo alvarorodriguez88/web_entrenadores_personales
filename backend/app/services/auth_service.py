@@ -5,7 +5,7 @@ import bcrypt
 from fastapi import HTTPException, status
 
 from app.config import settings
-from app.models.user import Usuario, Entrenador, Cliente
+from app.models.user import Usuario, Entrenador
 from app.schemas.auth import RegisterRequest, TokenPayload
 
 
@@ -21,17 +21,6 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def create_access_token(user_id: int, rol: str) -> str:
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-    )
-    payload = {
-        "sub": str(user_id),
-        "rol": rol,
-        "exp": expire
-    }
-    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-
-def create_refresh_token(user_id: int, rol: str) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(
-        days=settings.REFRESH_TOKEN_EXPIRE_DAYS
     )
     payload = {
         "sub": str(user_id),
@@ -96,31 +85,12 @@ def login_user(db: Session, email: str, password: str) -> dict:
         )
 
     access_token = create_access_token(user.id_usuario, user.rol)
-    refresh_token = create_refresh_token(user.id_usuario, user.rol)
 
     return {
         "access_token": access_token,
-        "refresh_token": refresh_token,
         "token_type": "bearer"
     }
 
-def refresh_access_token(db: Session, refresh_token: str) -> dict:
-    payload = verify_token(refresh_token)
-
-    user = db.query(Usuario).filter(Usuario.id_usuario == payload.sub).first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found"
-        )
-
-    new_access_token = create_access_token(user.id_usuario, user.rol)
-
-    return {
-        "access_token": new_access_token,
-        "refresh_token": refresh_token,
-        "token_type": "bearer"
-    }
 
 def change_password(db: Session, user_id: int, current_password: str, new_password: str) -> None:
     user = db.query(Usuario).filter(Usuario.id_usuario == user_id).first()

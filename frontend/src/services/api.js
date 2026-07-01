@@ -415,6 +415,28 @@ export const multimediaApi = {
 }
 
 
+export const chatApi = {
+  getSessions() { 
+    return request('/chat')
+  },
+
+  getSession(id) {
+    return request(`/chat/${id}`)
+  },
+
+  createSession(titulo) {
+    return request('/chat', { method: 'POST', body: { titulo } })
+  },
+
+  sendMessage(id, content) {
+    return request(`/chat/${id}/messages`, { method: 'POST', body: { content } })
+  },
+  
+  deleteSession(id) {return request(`/chat/${id}`, { method: 'DELETE' })
+  }
+}
+
+
 export const metricsApi = {
   getClientMetrics(clientId) {
     return request(`/metrics/clients/${clientId}`)

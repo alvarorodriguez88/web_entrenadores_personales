@@ -80,9 +80,9 @@ def update_exercise(db: Session, exercise_id: int, data: ExerciseUpdate, trainer
         exercise.grupo_muscular = data.grupo_muscular
     if data.equipamiento is not None:
         exercise.equipamiento = data.equipamiento
-    if data.id_video is not None:
+    if 'id_video' in data.model_fields_set:
         exercise.id_video = data.id_video
-    if data.id_imagen is not None:
+    if 'id_imagen' in data.model_fields_set:
         exercise.id_imagen = data.id_imagen
 
     db.commit()

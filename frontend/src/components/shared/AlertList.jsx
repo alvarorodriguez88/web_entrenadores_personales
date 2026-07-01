@@ -21,7 +21,7 @@ function AlertList({ alertas = [], emptyMessage = 'No hay alertas' }) {
   }
 
   return (
-    <ul className="flex flex-col divide-y divide-gray-100">
+    <ul className="flex flex-col divide-y divide-gray-100 max-h-[260px] overflow-y-auto">
       {alertas.map((a, i) => (
         <li key={i} className="flex items-center gap-3 py-3.5">
           <div className="w-10 h-10 rounded-full bg-blue-100 text-[#1D7FD8] font-semibold text-sm flex items-center justify-center shrink-0">

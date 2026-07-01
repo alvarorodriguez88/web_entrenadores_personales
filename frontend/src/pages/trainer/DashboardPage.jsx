@@ -122,12 +122,11 @@ function DashboardPage() {
       </div>
 
       {/* Tabla individual */}
-      <Card title="Tabla individual">
-        <ClientStatsTable
-          data={tablaClientes}
-          emptyMessage="No hay datos de clientes individuales"
-        />
-      </Card>
+      <ClientStatsTable
+        data={tablaClientes}
+        title="Tabla individual"
+        emptyMessage="No hay datos de clientes individuales"
+      />
 
     </div>
   )
