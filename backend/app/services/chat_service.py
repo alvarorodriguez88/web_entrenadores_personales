@@ -15,9 +15,7 @@ MCP_URL = os.getenv("MCP_URL", "http://mcp:8000/mcp")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
 
 SYSTEM_PROMPT = """You are an assistant for personal trainers using the web-entrenadores platform.
-You have access to the trainer's clients, routines and analytics data.
-Use the available tools to answer questions accurately based on real data.
-When comparing clients or recommending routines, always base your answer on the data retrieved.
+You have access to the trainer's clients, routines and analytics data through tools.
 Respond in the same language the trainer uses."""
 
 
@@ -79,11 +77,48 @@ def _save_message(db: Session, session_id: int, role: str, content: str) -> Chat
     return message
 
 
-def _build_messages_for_llm(history: list[ChatMensaje], new_user_content: str) -> list[dict]:
+def _save_assistant_with_tool_calls(db: Session, session_id: int, llm_message: dict) -> ChatMensaje:
+    payload = json.dumps({
+        "content": llm_message.get("content"),
+        "tool_calls": llm_message["tool_calls"],
+    }, ensure_ascii=False)
+    return _save_message(db, session_id, "assistant", payload)
+
+
+def _save_tool_result(db: Session, session_id: int, tool_call_id: str, result_text: str) -> ChatMensaje:
+    payload = json.dumps({
+        "tool_call_id": tool_call_id,
+        "content": result_text,
+    }, ensure_ascii=False)
+    return _save_message(db, session_id, "tool", payload)
+
+
+def _is_json_content(text: str) -> bool:
+    return (text or "").strip().startswith("{")
+
+
+def _build_messages_for_llm(history: list[ChatMensaje]) -> list[dict]:
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     for msg in history:
-        messages.append({"role": msg.rol, "content": msg.content})
-    messages.append({"role": "user", "content": new_user_content})
+        if msg.rol == "user":
+            messages.append({"role": "user", "content": msg.content})
+        elif msg.rol == "assistant":
+            if _is_json_content(msg.content):
+                data = json.loads(msg.content)
+                messages.append({
+                    "role": "assistant",
+                    "content": data.get("content"),
+                    "tool_calls": data["tool_calls"],
+                })
+            else:
+                messages.append({"role": "assistant", "content": msg.content})
+        elif msg.rol == "tool":
+            data = json.loads(msg.content)
+            messages.append({
+                "role": "tool",
+                "tool_call_id": data["tool_call_id"],
+                "content": data["content"],
+            })
     return messages
 
 
@@ -123,14 +158,15 @@ def _format_tool(tool) -> dict:
     }
 
 
-async def _execute_tool_call(token: str, tool_name: str, tool_args: dict) -> dict:
+async def _execute_tool_call(token: str, tool_name: str, tool_args: dict) -> str:
     transport = StreamableHttpTransport(
         url=MCP_URL,
         headers={"Authorization": f"Bearer {token}"}
     )
     async with Client(transport) as client:
         result = await client.call_tool(tool_name, tool_args)
-        return result
+    parts = [item.text if hasattr(item, "text") else str(item) for item in result.content]
+    return "\n".join(parts) if parts else ""
 
 
 async def send_message(db: Session, trainer_id: int, trainer_token: str, session_id: int, user_content: str) -> ChatMensaje:
@@ -143,47 +179,51 @@ async def send_message(db: Session, trainer_id: int, trainer_token: str, session
         db.commit()
 
     history = get_messages(db, session_id, trainer_id)
-
-    messages_for_llm = _build_messages_for_llm(history[:-1], user_content)
+    context_messages = _build_messages_for_llm(history)
 
     tools = await _get_mcp_tools(trainer_token)
 
-    response = await _call_llm(messages_for_llm, tools)
+    MAX_ITERATIONS = 10
+    for _ in range(MAX_ITERATIONS):
+        response = await _call_llm(context_messages, tools)
+        llm_message = response.get("choices", [{}])[0].get("message", {})
+        tool_calls = llm_message.get("tool_calls") or []
 
-    message_content = response.get("choices", [{}])[0].get("message", {})
-    tool_calls = message_content.get("tool_calls", [])
+        if not tool_calls:
+            final_content = llm_message.get("content") or ""
+            return _save_message(db, session_id, "assistant", final_content)
 
-    if not tool_calls:
-        assistant_content = message_content.get("content", "")
-    else:
-        context_messages = messages_for_llm + [{"role": "assistant", "content": message_content.get("content", "")}]
+        _save_assistant_with_tool_calls(db, session_id, llm_message)
+        context_messages.append({
+            "role": "assistant",
+            "content": llm_message.get("content"),
+            "tool_calls": tool_calls,
+        })
+
         for call in tool_calls:
             fn = call.get("function", {})
             tool_name = fn.get("name", "")
+            tool_call_id = call.get("id", "")
             tool_args = fn.get("arguments", {})
             if isinstance(tool_args, str):
-                tool_args = json.loads(tool_args)
+                try:
+                    tool_args = json.loads(tool_args)
+                except json.JSONDecodeError:
+                    tool_args = {}
 
             try:
-                tool_result = await _execute_tool_call(trainer_token, tool_name, tool_args)
-                if isinstance(tool_result, str):
-                    result_text = tool_result
-                else:
-                    try:
-                        json.dumps(tool_result)
-                        result_text = json.dumps(tool_result, ensure_ascii=False, default=str)
-                    except (TypeError, ValueError):
-                        result_text = str(tool_result)
+                result_text = await _execute_tool_call(trainer_token, tool_name, tool_args)
             except Exception as e:
                 result_text = f"Error executing tool {tool_name}: {str(e)}"
 
+            _save_tool_result(db, session_id, tool_call_id, result_text)
             context_messages.append({
                 "role": "tool",
-                "tool_call_id": call.get("id", ""),
-                "content": result_text
+                "tool_call_id": tool_call_id,
+                "content": result_text,
             })
 
-        response = await _call_llm(context_messages, [])
-        assistant_content = response.get("choices", [{}])[0].get("message", {}).get("content", "")
-
-    return _save_message(db, session_id, "assistant", assistant_content)
+    # Safety fallback: loop exhausted, force plain response
+    response = await _call_llm(context_messages, [])
+    fallback_content = response.get("choices", [{}])[0].get("message", {}).get("content") or ""
+    return _save_message(db, session_id, "assistant", fallback_content)

@@ -1,6 +1,6 @@
 from app.schemas.auth import (
     RegisterRequest, LoginRequest, TokenResponse,
-    RefreshRequest, ChangePasswordRequest, TokenPayload
+    ChangePasswordRequest, TokenPayload
 )
 from app.schemas.user import TrainerUpdate, TrainerResponse, ClientUpdate, ClientResponse
 from app.schemas.exercise import ExerciseCreate, ExerciseUpdate, ExerciseResponse
