@@ -287,7 +287,8 @@ def get_trainer_recent_activity(db: Session, trainer_id: int) -> list[dict]:
     ).join(
         Cliente, AsignacionRutina.id_cliente == Cliente.id_usuario
     ).filter(
-        AsignacionRutina.id_cliente.in_(client_ids)
+        AsignacionRutina.id_cliente.in_(client_ids),
+        SesionRutina.fecha_hora <= func.now(),
     ).order_by(
         SesionRutina.fecha_hora.desc()
     ).limit(5).all()
@@ -349,7 +350,8 @@ def get_trainer_clients_list(db: Session, trainer_id: int) -> list[dict]:
     ).join(
         SesionRutina, SesionRutina.id_asignacion == AsignacionRutina.id_asignacion_rutina
     ).filter(
-        AsignacionRutina.id_cliente.in_(client_ids)
+        AsignacionRutina.id_cliente.in_(client_ids),
+        SesionRutina.fecha_hora <= func.now(),
     ).group_by(AsignacionRutina.id_cliente).all()
     sesion_map = {row.id_cliente: row.ultima for row in sesion_rows}
 
@@ -373,7 +375,8 @@ def get_trainer_clients_table(db: Session, trainer_id: int, periodo: str) -> lis
     result = []
     for client in clients:
         ultima_sesion = db.query(SesionRutina.fecha_hora).join(AsignacionRutina).filter(
-            AsignacionRutina.id_cliente == client.id_usuario
+            AsignacionRutina.id_cliente == client.id_usuario,
+            SesionRutina.fecha_hora <= func.now(),
         ).order_by(SesionRutina.fecha_hora.desc()).first()
 
         result.append({
@@ -528,20 +531,20 @@ def get_client_today_workout(db: Session, client_id: int) -> list[dict]:
             categorias = [r.nombre for r in cat_rows]
 
             exercises_result.append({
-                "id_ejercicio":   ejercicio.id_ejercicio,
-                "nombre":         ejercicio.nombre,
+                "id_ejercicio": ejercicio.id_ejercicio,
+                "nombre": ejercicio.nombre,
                 "grupo_muscular": ejercicio.grupo_muscular,
-                "equipamiento":   ejercicio.equipamiento,
-                "descripcion":    ejercicio.descripcion,
+                "equipamiento": ejercicio.equipamiento,
+                "descripcion": ejercicio.descripcion,
                 "video":  {"nombre_archivo": ejercicio.video.nombre_archivo,  "nombre_original": ejercicio.video.nombre_original}  if ejercicio.video  else None,
                 "imagen": {"nombre_archivo": ejercicio.imagen.nombre_archivo, "nombre_original": ejercicio.imagen.nombre_original} if ejercicio.imagen else None,
-                "categorias":     categorias,
-                "series_plan":    custom.series_plan if custom and custom.series_plan is not None else bre.series_plan,
-                "reps_plan":      custom.reps_plan   if custom and custom.reps_plan   is not None else bre.reps_plan,
-                "peso_obj":       float(custom.peso_obj)     if custom and custom.peso_obj     is not None else (float(bre.peso_obj) if bre.peso_obj is not None else None),
-                "descanso_seg":   custom.descanso_seg if custom and custom.descanso_seg is not None else bre.descanso_seg,
-                "notas":          custom.notas        if custom and custom.notas        is not None else bre.notas,
-                "orden":          bre.orden,
+                "categorias": categorias,
+                "series_plan": custom.series_plan if custom and custom.series_plan is not None else bre.series_plan,
+                "reps_plan": custom.reps_plan if custom and custom.reps_plan is not None else bre.reps_plan,
+                "peso_obj": float(custom.peso_obj) if custom and custom.peso_obj is not None else (float(bre.peso_obj) if bre.peso_obj is not None else None),
+                "descanso_seg": custom.descanso_seg if custom and custom.descanso_seg is not None else bre.descanso_seg,
+                "notas": custom.notas if custom and custom.notas is not None else bre.notas,
+                "orden": bre.orden,
             })
 
         sesion_hoy = db.query(SesionRutina).filter(
@@ -552,22 +555,22 @@ def get_client_today_workout(db: Session, client_id: int) -> list[dict]:
 
         result.append({
             "id_asignacion_rutina": assignment.id_asignacion_rutina,
-            "id_bloque_rutina":     block.id_bloque_rutina,
-            "nombre_rutina":        routine.nombre,
-            "nivel_rutina":         routine.nivel,
-            "objetivo_rutina":      routine.objetivo,
-            "descripcion_rutina":   routine.descripcion,
-            "nombre_bloque":        block.nombre,
-            "numero_dia":           block.numero_dia,
-            "notas_bloque":         block.notas,
-            "fecha_inicio":         assignment.fecha_inicio,
-            "fecha_fin":            assignment.fecha_fin,
-            "ejercicios":           exercises_result,
+            "id_bloque_rutina": block.id_bloque_rutina,
+            "nombre_rutina": routine.nombre,
+            "nivel_rutina": routine.nivel,
+            "objetivo_rutina": routine.objetivo,
+            "descripcion_rutina": routine.descripcion,
+            "nombre_bloque": block.nombre,
+            "numero_dia": block.numero_dia,
+            "notas_bloque": block.notas,
+            "fecha_inicio": assignment.fecha_inicio,
+            "fecha_fin": assignment.fecha_fin,
+            "ejercicios": exercises_result,
             "sesion_hoy": {
                 "id_sesion_rutina": sesion_hoy.id_sesion_rutina,
-                "duracion_min":     sesion_hoy.duracion_min,
-                "esfuerzo_rpe":     sesion_hoy.esfuerzo_rpe,
-                "conformidad":      sesion_hoy.conformidad,
+                "duracion_min": sesion_hoy.duracion_min,
+                "esfuerzo_rpe": sesion_hoy.esfuerzo_rpe,
+                "conformidad": sesion_hoy.conformidad,
                 "nota_rendimiento": float(sesion_hoy.nota_rendimiento) if sesion_hoy.nota_rendimiento else None,
             } if sesion_hoy else None,
         })
@@ -580,7 +583,8 @@ def get_client_recent_activity(db: Session, client_id: int) -> list[dict]:
             db.query(AsignacionRutina.id_asignacion_rutina).filter(
                 AsignacionRutina.id_cliente == client_id
             )
-        )
+        ),
+        SesionRutina.fecha_hora <= func.now(),
     ).order_by(SesionRutina.fecha_hora.desc()).limit(5).all()
 
     return [

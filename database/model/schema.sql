@@ -398,7 +398,7 @@ DROP TABLE IF EXISTS `web_entrenadores`.`chat_sesion`;
 CREATE TABLE IF NOT EXISTS `web_entrenadores`.`chat_sesion` (
   `id_chat_sesion` INT NOT NULL AUTO_INCREMENT,
   `id_entrenador` INT NOT NULL,
-  `titulo` VARCHAR(150) NULL     COMMENT 'Título opcional, ej: "Consulta sobre Carlos"',
+  `titulo` VARCHAR(150) NULL COMMENT 'Título opcional, ej: "Consulta sobre Carlos"',
   `fecha_creacion` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `fecha_updated`  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id_chat_sesion`),

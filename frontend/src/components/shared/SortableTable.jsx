@@ -129,7 +129,6 @@ function SortableTable({
     </ul>
   )
 
-  /* Con título: card propia con header integrado */
   if (title) {
     return (
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
@@ -168,8 +167,7 @@ function SortableTable({
       </div>
     )
   }
-
-  /* Sin título: layout simple (búsqueda + columnas + filas) */
+  
   return (
     <div className="flex flex-col gap-3">
       {!isMulti ? (

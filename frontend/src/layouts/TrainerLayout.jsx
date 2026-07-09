@@ -5,7 +5,7 @@ import ModalCambiarContrasena from '../components/shared/ModalCambiarContrasena'
 
 const trainerNavItems = [
   { label: 'Inicio',     path: '/trainer/inicio',     icon: Home },
-  { label: 'Dashboard',  path: '/trainer/dashboard',  icon: LayoutDashboard },
+  { label: 'Análisis',  path: '/trainer/dashboard',  icon: LayoutDashboard },
   { label: 'Contenido',  path: '/trainer/content',    icon: BookOpen },
   { label: 'Clientes',   path: '/trainer/clients',    icon: Users },
   { label: 'Asistente IA', path: '/trainer/asistente', icon: Sparkles },

@@ -110,29 +110,29 @@ def create_client_for_trainer(db: Session, trainer_id: int, data: ClientCreate) 
         raise HTTPException(status_code=400, detail="Email already registered")
 
     user = Usuario(
-        email       = data.email,
+        email = data.email,
         passwd_hash = hash_password(data.password),
-        rol         = "CLIENTE",
-        nombre      = data.nombre,
-        apellidos   = data.apellidos,
+        rol = "CLIENTE",
+        nombre = data.nombre,
+        apellidos = data.apellidos,
     )
     db.add(user)
     db.flush()
 
     client = Cliente(
-        id_usuario    = user.id_usuario,
+        id_usuario = user.id_usuario,
         id_entrenador = trainer_id,
-        nivel         = data.nivel,
-        objetivo      = data.objetivo,
+        nivel = data.nivel,
+        objetivo = data.objetivo,
     )
     db.add(client)
 
     if data.peso_kg is not None:
         metric = MetricaFisica(
             id_cliente = user.id_usuario,
-            peso_kg    = data.peso_kg,
-            altura_cm  = data.altura_cm,
-            grasa_pct  = data.grasa_pct,
+            peso_kg = data.peso_kg,
+            altura_cm = data.altura_cm,
+            grasa_pct = data.grasa_pct,
         )
         db.add(metric)
 

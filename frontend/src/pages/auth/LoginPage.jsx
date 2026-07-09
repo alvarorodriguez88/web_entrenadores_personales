@@ -55,7 +55,7 @@ function LoginPage() {
   return (
     <div className="h-screen flex overflow-hidden">
 
-      {/* Imagen izquierda — ocupa toda la altura */}
+      {/* Imagen izquierda */}
       <div className="hidden md:block w-1/2 h-full">
         <img src={loginImg} alt="" className="block w-full h-full object-cover" />
       </div>

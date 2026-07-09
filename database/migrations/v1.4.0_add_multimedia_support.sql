@@ -10,13 +10,13 @@ USE `web_entrenadores`;
 
 
 CREATE TABLE IF NOT EXISTS `web_entrenadores`.`archivoMultimedia` (
-    `id_archivo`       INT NOT NULL AUTO_INCREMENT,
-    `id_entrenador`    INT NOT NULL,
-    `nombre_original`  VARCHAR(255) NOT NULL,
-    `nombre_archivo`   VARCHAR(255) NOT NULL,
-    `tipo`             ENUM('VIDEO', 'IMAGEN') NOT NULL,
-    `tamano_bytes`     INT NOT NULL,
-    `fecha_subida`     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `id_archivo` INT NOT NULL AUTO_INCREMENT,
+    `id_entrenador` INT NOT NULL,
+    `nombre_original` VARCHAR(255) NOT NULL,
+    `nombre_archivo` VARCHAR(255) NOT NULL,
+    `tipo` ENUM('VIDEO', 'IMAGEN') NOT NULL,
+    `tamano_bytes` INT NOT NULL,
+    `fecha_subida` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id_archivo`),
     UNIQUE INDEX `uq_nombre_archivo` (`nombre_archivo`),
     INDEX `fk_multimedia_entrenador_idx` (`id_entrenador`),

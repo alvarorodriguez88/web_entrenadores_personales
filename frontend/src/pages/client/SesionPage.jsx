@@ -62,7 +62,7 @@ export default function SesionPage() {
     workout ? workout.ejercicios.map(ej => ({ ...ej, series: initSeries(ej) })) : []
   )
   const [segundos,   setSegundos]   = useState(0)
-  const [descanso,   setDescanso]   = useState(null) // { restante, total, ejIdx }
+  const [descanso,   setDescanso]   = useState(null)
   const [showModal,  setShowModal]  = useState(false)
   const [rpe,        setRpe]        = useState(5)
   const [conformidad, setConformidad] = useState(5)
