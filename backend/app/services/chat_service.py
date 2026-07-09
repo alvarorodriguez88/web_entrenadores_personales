@@ -1,18 +1,13 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 import httpx
-import os
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
 import json
 
+from app.config import settings
 from app.models.chat import ChatSesion, ChatMensaje
 from app.schemas.chat import ChatSessionCreate, ChatMessageIn
-
-
-OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434/v1/chat/completions")
-MCP_URL = os.getenv("MCP_URL", "http://mcp:8000/mcp")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
 
 SYSTEM_PROMPT = """You are an assistant for personal trainers using the web-entrenadores platform.
 You have access to the trainer's clients, routines and analytics data through tools.
@@ -124,7 +119,7 @@ def _build_messages_for_llm(history: list[ChatMensaje]) -> list[dict]:
 
 async def _call_llm(messages: list[dict], tools: list[dict]) -> dict:
     payload = {
-        "model": OLLAMA_MODEL,
+        "model": settings.OLLAMA_MODEL,
         "messages": messages,
         "stream": False,
     }
@@ -132,14 +127,14 @@ async def _call_llm(messages: list[dict], tools: list[dict]) -> dict:
         payload["tools"] = tools
 
     async with httpx.AsyncClient(timeout=1200.0) as client:
-        response = await client.post(OLLAMA_URL, json=payload)
+        response = await client.post(settings.OLLAMA_URL, json=payload)
         response.raise_for_status()
         return response.json()
 
 
 async def _get_mcp_tools(token: str) -> list[dict]:
     transport = StreamableHttpTransport(
-        url=MCP_URL,
+        url=settings.MCP_URL,
         headers={"Authorization": f"Bearer {token}"}
     )
     async with Client(transport) as client:
@@ -160,7 +155,7 @@ def _format_tool(tool) -> dict:
 
 async def _execute_tool_call(token: str, tool_name: str, tool_args: dict) -> str:
     transport = StreamableHttpTransport(
-        url=MCP_URL,
+        url=settings.MCP_URL,
         headers={"Authorization": f"Bearer {token}"}
     )
     async with Client(transport) as client:
@@ -223,7 +218,6 @@ async def send_message(db: Session, trainer_id: int, trainer_token: str, session
                 "content": result_text,
             })
 
-    # Safety fallback: loop exhausted, force plain response
     response = await _call_llm(context_messages, [])
     fallback_content = response.get("choices", [{}])[0].get("message", {}).get("content") or ""
     return _save_message(db, session_id, "assistant", fallback_content)

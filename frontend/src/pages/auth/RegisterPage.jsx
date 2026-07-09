@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import Input from '../../components/shared/Input'
 import Button from '../../components/shared/Button'
+import registerImg from '../../assets/register.jpg'
+import logo from '../../assets/logo.svg'
 
 const API_BASE = 'http://localhost:8080/api/v1'
 
@@ -97,11 +99,21 @@ function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="h-screen flex overflow-hidden">
 
       {/* Formulario izquierda */}
-      <div className="w-full md:w-1/2 flex items-center justify-center px-10 py-12 bg-white">
+      <div className="w-full md:w-1/2 h-full overflow-y-auto flex items-center justify-center px-10 py-12 bg-white">
         <div className="w-full max-w-sm">
+
+          <div className="flex justify-center mb-8">
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="w-20 h-20 rounded-full bg-white flex items-center justify-center ring-4 ring-white shadow-lg overflow-hidden cursor-pointer"
+            >
+              <img src={logo} alt="Volcán Fitness" className="w-full h-full object-cover" />
+            </button>
+          </div>
 
           <h1 className="text-3xl font-black text-gray-900 leading-tight mb-8">
             ¡Hagamos algo<br />grande!
@@ -154,14 +166,6 @@ function RegisterPage() {
               disabled={loading}
             />
 
-            <Input
-              type="textarea"
-              placeholder="¿Por qué quieres crearte la cuenta?"
-              value={''}
-              onChange={() => {}}
-              disabled={loading}
-            />
-
             {/* Checkbox términos */}
             <label className="flex items-start gap-2 cursor-pointer">
               <input
@@ -183,20 +187,31 @@ function RegisterPage() {
               <p className="text-sm text-red-500">{serverError}</p>
             )}
 
-            <div className="flex justify-end mt-2">
-              <Button type="submit" loading={loading}>
+            <div className="mt-2">
+              <Button type="submit" size="lg" variant="primaryDark" fullWidth loading={loading}>
                 Crear cuenta
               </Button>
             </div>
 
           </form>
+
+          <p className="text-center text-sm text-gray-500 mt-12">
+            ¿Ya tienes cuenta?{' '}
+            <button
+              type="button"
+              onClick={() => navigate('/login')}
+              className="font-semibold text-[#4C6EF5] underline hover:text-[#3b5bdb]"
+            >
+              Iniciar sesión
+            </button>
+          </p>
+
         </div>
       </div>
 
       {/* Imagen derecha */}
-      <div className="hidden md:block w-1/2 bg-gradient-to-br from-gray-600 to-gray-800">
-        {/* TODO: reemplazar el gradiente por una imagen real:
-            <img src={heroImg} alt="" className="w-full h-full object-cover" /> */}
+      <div className="hidden md:block w-1/2 h-full">
+        <img src={registerImg} alt="" className="block w-full h-full object-cover" />
       </div>
 
     </div>

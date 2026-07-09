@@ -5,7 +5,7 @@ import ModalCambiarContrasena from '../components/shared/ModalCambiarContrasena'
 
 const clientNavItems = [
   { label: 'Inicio',         path: '/client/inicio',     icon: Home },
-  { label: 'Dashboard',      path: '/client/dashboard',  icon: LayoutDashboard },
+  { label: 'Análisis',      path: '/client/dashboard',  icon: LayoutDashboard },
   { label: 'Entrenamiento',  path: '/client/exercises',  icon: Dumbbell },
 ]
 

@@ -53,7 +53,7 @@ function TabEjercicios() {
         : await exercisesApi.archiveExercise(id)
       setEjercicios(prev => prev.map(e => e.id_ejercicio === id ? updated : e))
     } catch {
-      // silencioso — el estado local no cambia
+
     } finally {
       setToggling(prev => { const s = new Set(prev); s.delete(id); return s })
     }
@@ -284,7 +284,7 @@ function TabRutinas() {
         : await routinesApi.archiveRoutine(id)
       setRutinas(prev => prev.map(r => r.id_rutina === id ? updated : r))
     } catch {
-      // silencioso — el estado local no cambia
+
     } finally {
       setToggling(prev => { const s = new Set(prev); s.delete(id); return s })
     }
@@ -536,7 +536,7 @@ function TabMultimedia() {
       await multimediaApi.deleteFile(id)
       setArchivos(prev => prev.filter(a => a.id_archivo !== id))
     } catch {
-      // silencioso — el estado local no cambia
+
     } finally {
       setDeleting(prev => { const s = new Set(prev); s.delete(id); return s })
     }

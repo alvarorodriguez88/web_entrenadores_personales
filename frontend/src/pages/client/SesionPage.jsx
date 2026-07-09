@@ -62,25 +62,22 @@ export default function SesionPage() {
     workout ? workout.ejercicios.map(ej => ({ ...ej, series: initSeries(ej) })) : []
   )
   const [segundos,   setSegundos]   = useState(0)
-  const [descanso,   setDescanso]   = useState(null) // { restante, total, ejIdx }
+  const [descanso,   setDescanso]   = useState(null)
   const [showModal,  setShowModal]  = useState(false)
   const [rpe,        setRpe]        = useState(5)
   const [conformidad, setConformidad] = useState(5)
   const [saving,     setSaving]     = useState(false)
   const [error,      setError]      = useState('')
 
-  // Redirect if no data
   useEffect(() => {
     if (!workout) navigate('/client/exercises', { replace: true })
   }, [workout, navigate])
 
-  // Session timer
   useEffect(() => {
     const id = setInterval(() => setSegundos(s => s + 1), 1000)
     return () => clearInterval(id)
   }, [])
 
-  // Rest timer — runs only while descanso is active
   useEffect(() => {
     if (!descanso) return
     const id = setInterval(() => {
@@ -91,12 +88,11 @@ export default function SesionPage() {
       })
     }, 1000)
     return () => clearInterval(id)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [descanso?.total, descanso?.ejIdx]) // re-run when a new rest starts
+  }, [descanso?.total, descanso?.ejIdx])
 
   if (!workout) return null
 
-  // ── Computed stats ──
+
   const totalSeries   = ejerciciosState.reduce((s, e) => s + e.series.length, 0)
   const hechas        = ejerciciosState.reduce((s, e) => s + e.series.filter(x => x.hecha).length, 0)
   const pct           = totalSeries > 0 ? Math.round((hechas / totalSeries) * 100) : 0
@@ -104,14 +100,12 @@ export default function SesionPage() {
     s + e.series.filter(x => x.hecha).reduce((ss, x) => ss + (parseFloat(x.kg) || 0) * (parseInt(x.reps) || 0), 0), 0)
   const ejCompletados = ejerciciosState.filter(e => e.series.every(x => x.hecha)).length
 
-  // ── Semana actual ──
   const hoy       = new Date()
   const inicio    = workout.fecha_inicio ? new Date(workout.fecha_inicio) : null
   const fin       = workout.fecha_fin    ? new Date(workout.fecha_fin)    : null
   const totalSem  = inicio && fin ? Math.max(1, Math.ceil((fin - inicio) / (7 * 86400000))) : 1
   const semActual = inicio ? Math.min(totalSem, Math.max(1, Math.ceil((hoy - inicio) / (7 * 86400000)))) : 1
 
-  // ── Mutaciones ──
   function setSerie(ejIdx, serIdx, campo, valor) {
     setEjerciciosState(prev => prev.map((e, i) =>
       i !== ejIdx ? e : {
@@ -147,7 +141,6 @@ export default function SesionPage() {
     }))
   }
 
-  // ── Guardar sesión ──
   async function handleGuardar() {
     setSaving(true)
     setError('')
@@ -349,7 +342,6 @@ export default function SesionPage() {
                         </button>
                       </div>
 
-                      {/* Timer de descanso (se muestra después de completar, antes de la siguiente serie) */}
                       {mostrarDescanso && serie.hecha && serIdx === ej.series.filter(s => s.hecha).length - 1 && serIdx < ej.series.length - 1 && (
                         <div className="mt-2 flex items-center gap-3 px-4 py-2.5 bg-blue-50 border border-blue-100 rounded-xl">
                           <RestCircle restante={descanso.restante} total={descanso.total} />

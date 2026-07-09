@@ -12,9 +12,8 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
 
-    LLM_MODEL: str = "ollama_chat/qwen2.5:7b"
-    LLM_API_KEY: str = ""
-    OLLAMA_API_BASE: str = "http://ollama:11434"
+    OLLAMA_URL: str = "http://ollama:11434/v1/chat/completions"
+    OLLAMA_MODEL: str = "qwen2.5:7b"
 
     MCP_URL: str = "http://mcp:8000/mcp"
 

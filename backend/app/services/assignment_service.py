@@ -418,13 +418,13 @@ def create_assignment_exercise(db: Session, assignment_id: int, data: Assignment
         )
 
     customization = AsignacionEjercicio(
-        id_asignacion_rutina=assignment_id,
-        id_bloque_rutina_ej=data.id_bloque_rutina_ej,
-        series_plan=data.series_plan,
-        reps_plan=data.reps_plan,
-        peso_obj=data.peso_obj,
-        descanso_seg=data.descanso_seg,
-        notas=data.notas
+        id_asignacion_rutina = assignment_id,
+        id_bloque_rutina_ej = data.id_bloque_rutina_ej,
+        series_plan = data.series_plan,
+        reps_plan = data.reps_plan,
+        peso_obj = data.peso_obj,
+        descanso_seg = data.descanso_seg,
+        notas = data.notas
     )
     db.add(customization)
     db.commit()
@@ -437,10 +437,10 @@ def update_assignment_exercise(db: Session, assignment_id: int, customization_id
     )
 
     customization.series_plan  = data.series_plan
-    customization.reps_plan    = data.reps_plan
-    customization.peso_obj     = data.peso_obj
+    customization.reps_plan = data.reps_plan
+    customization.peso_obj = data.peso_obj
     customization.descanso_seg = data.descanso_seg
-    customization.notas        = data.notas
+    customization.notas = data.notas
 
     db.commit()
     db.refresh(customization)
@@ -481,8 +481,8 @@ def _calculate_session_performance(db: Session, session: SesionRutina) -> float:
         ).first()
 
         series_plan = (customization.series_plan if customization and customization.series_plan else None) or template.series_plan
-        reps_plan   = (customization.reps_plan   if customization and customization.reps_plan   else None) or template.reps_plan
-        peso_plan   = (customization.peso_obj     if customization and customization.peso_obj    else None) or template.peso_obj
+        reps_plan = (customization.reps_plan if customization and customization.reps_plan else None) or template.reps_plan
+        peso_plan = (customization.peso_obj if customization and customization.peso_obj else None) or template.peso_obj
 
         scores = []
 

@@ -5,7 +5,6 @@ import { chatApi } from '../../services/api'
 import Spinner from '../../components/shared/Spinner'
 import AvatarCircle from '../../components/shared/AvatarCircle'
 
-// ── Date utils ───────────────────────────────────────────────
 
 function getGroup(dateStr) {
   const d = new Date(dateStr)
@@ -46,7 +45,6 @@ function agruparSesiones(sesiones) {
 
 const GROUP_ORDER = ['HOY', 'AYER', 'ESTA SEMANA', 'ANTERIORES']
 
-// ── Content renderer ─────────────────────────────────────────
 
 function parseBold(text) {
   const parts = text.split(/\*\*(.+?)\*\*/)
