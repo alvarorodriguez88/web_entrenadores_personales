@@ -84,10 +84,6 @@ function SortableTable({
       })
     : filtered
 
-  if (data.length === 0) {
-    return <p className="text-sm text-gray-400 py-12 text-center">{emptyMessage}</p>
-  }
-
   const colHeaders = (
     <div className="grid gap-3 px-6 py-3 border-b border-gray-100" style={{ gridTemplateColumns: gridCols }}>
       {columns.map(col => (
@@ -103,7 +99,11 @@ function SortableTable({
     </div>
   )
 
-  const rows = sorted.length === 0 ? (
+  const rows = data.length === 0 ? (
+    <p className="text-sm text-gray-400 py-12 text-center px-6">
+      {emptyMessage}
+    </p>
+  ) : sorted.length === 0 ? (
     <p className="text-sm text-gray-400 py-8 text-center px-6">
       Sin resultados para la búsqueda actual
     </p>
@@ -162,7 +162,7 @@ function SortableTable({
           </div>
         )}
 
-        {colHeaders}
+        {data.length > 0 && colHeaders}
         {rows}
       </div>
     )

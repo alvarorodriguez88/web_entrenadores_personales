@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Users, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import Button             from '../../components/shared/Button'
 import SortableTable      from '../../components/shared/SortableTable'
 import ModalAnadirCliente from '../../components/trainer/ModalAnadirCliente'
@@ -124,11 +124,6 @@ function ClientesPage() {
         </div>
       ) : error ? (
         <p className="text-sm text-red-500 py-4">{error}</p>
-      ) : mapped.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 py-16 text-gray-300">
-          <Users size={36} />
-          <p className="text-sm">No hay clientes registrados</p>
-        </div>
       ) : (
         <SortableTable
           data={mapped}
